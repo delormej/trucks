@@ -62,7 +62,7 @@ namespace Trucks
 
         public List<RevenueDetail> LoadFromCsv(string csv)
         {
-            Console.WriteLine("Truck, Week, Date, Linehaul");
+            Console.WriteLine("Truck, Week, Date, NetRevenue");
             List<RevenueDetail> truckRevenue = new List<RevenueDetail>();
 
             using (var sr = new StringReader(csv))
@@ -82,7 +82,7 @@ namespace Trucks
                         RevenueDetail detail = ParseRow(row);
                         truckRevenue.Add(detail);
                         Console.WriteLine("{0}, {1}, {2:MM/dd/yyyy}, {3}", truckId, 
-                            GetWeek(detail.Date), detail.Date, detail.Linehaul);                        
+                            GetWeek(detail.Date), detail.Date, GetRevenue(detail));                        
                     }
                 }
             }
@@ -98,10 +98,15 @@ namespace Trucks
         {
             RevenueDetail detail = new RevenueDetail();
             string date = GetColumn(row, Column.Date);
-            string linehaul = GetColumn(row, Column.Linehaul);
             
             detail.Date = DateTime.Parse(date);
-            detail.Linehaul = double.Parse(linehaul);
+            detail.Linehaul = GetColumnAsDouble(row, Column.Linehaul);
+            // detail.Layover = GetColumnAsDouble(row, Column.Layover);
+            // detail.Other = GetColumnAsDouble(row, Column.Other);
+            // detail.StopOff = GetColumnAsDouble(row, Column.StopOff);
+            // detail.Canada = GetColumnAsDouble(row, Column.Canada);
+            detail.Accesorials = GetColumnAsDouble(row, Column.Accesorials);
+
             return detail;
         }
 
@@ -149,6 +154,12 @@ namespace Trucks
             return value.Replace("\"", "");
         }
 
+        private double GetColumnAsDouble(string[] row, Column column)
+        {
+            string value = GetColumn(row, column);
+            return double.Parse(value);
+        }
+
         private List<WeeklySummary> RevenueByWeek(List<RevenueDetail> details)
         {
             //details.Where()
@@ -173,9 +184,18 @@ namespace Trucks
                 }
 
                 summary.NetRevenue += (detail.Linehaul * 0.50);
+                summary.NetRevenue += (detail.Accesorials * 0.20);
             }
 
             return summaries;
+        }
+
+        private double GetRevenue(RevenueDetail detail)
+        {
+            double revenue = 0;
+            revenue += (detail.Linehaul * 0.50);
+            revenue += (detail.Accesorials * 0.20);            
+            return revenue;
         }
 
         private int GetWeek(DateTime date)
