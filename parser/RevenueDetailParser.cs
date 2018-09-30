@@ -25,13 +25,49 @@ namespace Trucks
         public double Other {get;set;}
         public double Linehaul {get;set;}
         public double FuelSurcharge {get;set;}
+        public double Canada {get;set;}
     }
 
-    public class WeeklySummary
+    public class Driver
+    {
+        public string Name { get; set; }
+        public string StreetAddress { get; set; }
+        public string City { get; set; }
+        public string State { get; set; }
+        public string ZipCode { get; set; }
+        public double BasePercent { get; set; }
+        public double AccessorialPercent { get; set; }
+        public string SocialSecurityNumber { get; set; }
+        public List<TruckService> Trucks { get; set; }
+    }
+
+    public class TruckService
+    {
+        public DateTime InServiceDate { get; set; }
+        public DateTime OutServiceDate { get; set; }
+        public string TruckId { get; set; }
+    }
+
+    public class Truck
+    {
+        public string TruckId { get; set; }
+        public double InitialEquipmentValue { get; set; }
+        public double LeasePayment { get; set; }
+    }
+
+    public class WeeklySummary // rename this settlement? 
     {
         public string Truck {get; set;}
         public int Week { get; set; }
+        public DateTime SettlementDate { get; set; }
         public double NetRevenue { get; set; }
+        public double Advances { get; set; }
+        public double Qualcomm { get; set; }
+        public double OccupationalInsurance { get; set; }
+        public double ComdataFees { get; set; }
+        public double SecurityDeposit { get; set; }
+        // credits? 
+        // prev neg balance? 
     }
 
     /// <summary>
@@ -101,11 +137,20 @@ namespace Trucks
             
             detail.Date = DateTime.Parse(date);
             detail.Linehaul = GetColumnAsDouble(row, Column.Linehaul);
-            // detail.Layover = GetColumnAsDouble(row, Column.Layover);
-            // detail.Other = GetColumnAsDouble(row, Column.Other);
-            // detail.StopOff = GetColumnAsDouble(row, Column.StopOff);
-            // detail.Canada = GetColumnAsDouble(row, Column.Canada);
+            detail.Layover = GetColumnAsDouble(row, Column.Layover);
+            detail.Other = GetColumnAsDouble(row, Column.Other);
+            detail.StopOff = GetColumnAsDouble(row, Column.StopOff);
+            detail.Canada = GetColumnAsDouble(row, Column.Canada);
             detail.Accesorials = GetColumnAsDouble(row, Column.Accesorials);
+            detail.Miles = GetColumnAsDouble(row, Column.Miles);
+            detail.Detention = GetColumnAsDouble(row, Column.Detention);
+            detail.DeadHead = GetColumnAsDouble(row, Column.DeadHead);
+            detail.HandLoad = GetColumnAsDouble(row, Column.HandLoad); 
+            detail.Tolls = GetColumnAsDouble(row, Column.Tolls); 
+            detail.Bonus = GetColumnAsDouble(row, Column.Bonus); 
+            detail.EmptyMove = GetColumnAsDouble(row, Column.EmptyMove); 
+            detail.Other = GetColumnAsDouble(row, Column.Other); 
+            detail.FuelSurcharge = GetColumnAsDouble(row, Column.FuelSurcharge);  
 
             return detail;
         }
