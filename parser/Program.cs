@@ -11,6 +11,7 @@ namespace Trucks
             {
                 workbook.Open("Settlement.xlsx");
                 string value = workbook.GetCellValue("Week_27", "B1");
+                workbook.UpdateCellValue("Week_27", "B1", "Rob De Lorme");
                 Console.WriteLine(value);
             }
             return;
