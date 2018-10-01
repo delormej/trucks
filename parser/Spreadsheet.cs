@@ -5,9 +5,13 @@ using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace Trucks
 {
-    public class OdsFile
+    // TODO:
+    // 1. Refactor and add method for InsertCellValue()
+    // 2. Copy "Week_1" as template sheet for each subsequent week
+
+    public class Spreadsheet
     {
-        public OdsFile()
+        public Spreadsheet()
         {
         }
 

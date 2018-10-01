@@ -75,7 +75,6 @@ namespace Trucks
     /// </summary>
     public class RevenueDetailParser
     {
-        // Source: https://github.com/gopro/gpmf-parser
         enum Column {
             Load = 0,
             Date = 1,
@@ -123,10 +122,6 @@ namespace Trucks
                 }
             }
 
-            //List<WeeklySummary> weekly = RevenueByWeek(truckRevenue);
-            //foreach (WeeklySummary week in weekly)
-            //    Console.WriteLine("{0}, {1}", week.Week, week.NetRevenue);
-
             return truckRevenue;
         }
 
@@ -171,7 +166,6 @@ namespace Trucks
                         truckId = line.Substring(start + 2, line.Length - start - 4);
                         if (truckId.Length > 0)
                             break;
-
                     }
                 }
             }
