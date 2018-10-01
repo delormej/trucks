@@ -7,6 +7,14 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
+            using (ExcelWorkbook workbook = new ExcelWorkbook())
+            {
+                workbook.Open("Settlement.xlsx");
+                string value = workbook.GetCellValue("Week_27", "B1");
+                Console.WriteLine(value);
+            }
+            return;
+
             if (args.Length < 1)
             {
                 ShowUsage();
