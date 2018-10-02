@@ -3,6 +3,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 
 namespace Trucks
 {
@@ -239,8 +240,20 @@ namespace Trucks
 
         private int GetWeek(DateTime date)
         {
-            int week = date.DayOfYear / 7;
-            return week + 1;
+            //source: https://stackoverflow.com/questions/11154673/get-the-correct-week-number-of-a-given-date
+
+            // Seriously cheat.  If its Monday, Tuesday or Wednesday, then it'll 
+            // be the same week# as whatever Thursday, Friday or Saturday are,
+            // and we always get those right
+            DayOfWeek day = CultureInfo.InvariantCulture.Calendar.GetDayOfWeek(date);
+            if (day >= DayOfWeek.Monday && day <= DayOfWeek.Wednesday)
+            {
+                date = date.AddDays(3);
+            }
+
+            // Return the week of our adjusted day
+            return CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(
+                date, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
         }
     }
 }
