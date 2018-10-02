@@ -54,7 +54,7 @@ namespace Trucks
                 throw new InvalidOperationException("Document must be open first.");
 
             string value = string.Empty;
-            Cell theCell = GetCell(sheetName, addressName);
+            Cell theCell = GetCell(GetWorksheetPart(sheetName), addressName);
 
             // If the cell does not exist, return an empty string.
             if (theCell != null)
@@ -111,12 +111,8 @@ namespace Trucks
 
         public void UpdateCellValue(string sheetName, string addressName, string value)
         {
-            /*
-            Cell cell = new Cell()   
-                { CellReference = "A1", DataType = CellValues.String,  
-                    CellValue = new CellValue("Microsoft") };  
-             */
-            Cell theCell = GetCell(sheetName, addressName);
+            WorksheetPart wsPart = GetWorksheetPart(sheetName);
+            Cell theCell = GetCell(wsPart, addressName);
             if (theCell == null)
             {
                 // Only supports updating the value of an existing cell, if it doesn't exist - throw an error.
@@ -124,11 +120,27 @@ namespace Trucks
                 // https://docs.microsoft.com/en-us/office/open-xml/how-to-insert-text-into-a-cell-in-a-spreadsheet#sample-code
                 throw new ArgumentException("Cell address does not refer to an existing cell in the workbook.");
             }
-            return;
-            theCell.CellValue = new CellValue(value);
+
+            double number = 0;
+            if (double.TryParse(value, out number))
+            {
+                theCell.DataType = CellValues.Number;
+                theCell.CellValue = new CellValue(value);
+                theCell.InlineString = null;
+            }
+            else
+            {
+                theCell.DataType = CellValues.InlineString;
+                theCell.CellValue = null; // new CellValue(value);
+                theCell.InlineString = new InlineString() { Text = new Text(value) };
+            }
+            
+            wbPart.Workbook.CalculationProperties.ForceFullCalculation = true;
+            wbPart.Workbook.CalculationProperties.FullCalculationOnLoad = true;
+            wsPart.Worksheet.Save();
         }
 
-        private Cell GetCell(string sheetName, string addressName)
+        private WorksheetPart GetWorksheetPart(string sheetName)
         {
             // Find the sheet with the supplied name, and then use that 
             // Sheet object to retrieve a reference to the first worksheet.
@@ -144,17 +156,17 @@ namespace Trucks
             // Retrieve a reference to the worksheet part.
             WorksheetPart wsPart = 
                 (WorksheetPart)(wbPart.GetPartById(theSheet.Id));
+            
+            return wsPart;
+        }
 
+        private Cell GetCell(WorksheetPart wsPart, string addressName)
+        {
             // Use its Worksheet property to get a reference to the cell 
             // whose address matches the address you supplied.
             Cell theCell = wsPart.Worksheet.Descendants<Cell>().
                 Where(c => c.CellReference == addressName).FirstOrDefault();
 
-//theCell.CellValue = new CellValue("Rob De Lorme(2)");
-//theCell.DataType = new EnumValue<CellValues>(CellValues.String);
-theCell.DataType = CellValues.InlineString;
-theCell.InlineString = new InlineString() { Text = new Text("Robert") };
-wsPart.Worksheet.Save();
             return theCell;        
         }
     }
