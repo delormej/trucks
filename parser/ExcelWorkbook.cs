@@ -150,8 +150,10 @@ namespace Trucks
             Cell theCell = wsPart.Worksheet.Descendants<Cell>().
                 Where(c => c.CellReference == addressName).FirstOrDefault();
 
-theCell.CellValue = new CellValue("Rob De Lorme(2)");
-theCell.DataType = new EnumValue<CellValues>(CellValues.String);
+//theCell.CellValue = new CellValue("Rob De Lorme(2)");
+//theCell.DataType = new EnumValue<CellValues>(CellValues.String);
+theCell.DataType = CellValues.InlineString;
+theCell.InlineString = new InlineString() { Text = new Text("Robert") };
 wsPart.Worksheet.Save();
             return theCell;        
         }
