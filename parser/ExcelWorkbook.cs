@@ -42,10 +42,6 @@ namespace Trucks
             wbPart = document.WorkbookPart;
         }
 
-        public void Save()
-        {
-        }
-
         // Retrieve the value of a cell, given a file name, sheet name, 
         // and address name.
         public string GetCellValue(string sheetName, string addressName)

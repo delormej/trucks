@@ -27,6 +27,25 @@ namespace Trucks
         public double Linehaul {get;set;}
         public double FuelSurcharge {get;set;}
         public double Canada {get;set;}
+        public int Week { get { return GetWeek(this.Date); } }
+
+        private int GetWeek(DateTime date)
+        {
+            //source: https://stackoverflow.com/questions/11154673/get-the-correct-week-number-of-a-given-date
+
+            // Seriously cheat.  If its Monday, Tuesday or Wednesday, then it'll 
+            // be the same week# as whatever Thursday, Friday or Saturday are,
+            // and we always get those right
+            DayOfWeek day = CultureInfo.InvariantCulture.Calendar.GetDayOfWeek(date);
+            if (day >= DayOfWeek.Monday && day <= DayOfWeek.Wednesday)
+            {
+                date = date.AddDays(3);
+            }
+
+            // Return the week of our adjusted day
+            return CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(
+                date, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+        }
     }
 
     public class Driver
@@ -118,7 +137,7 @@ namespace Trucks
                         RevenueDetail detail = ParseRow(row);
                         truckRevenue.Add(detail);
                         Console.WriteLine("{0}, {1}, {2:MM/dd/yyyy}, {3}", truckId, 
-                            GetWeek(detail.Date), detail.Date, GetRevenue(detail));                        
+                            detail.Week, detail.Date, GetRevenue(detail));                        
                     }
                 }
             }
@@ -214,12 +233,11 @@ namespace Trucks
             WeeklySummary summary = new WeeklySummary() { Week = 1 };
             foreach (var detail in details)
             {
-                int week = GetWeek(detail.Date);
-                if (week != summary.Week)
+                if (detail.Week != summary.Week)
                 {
                     summaries.Add(summary);
                     summary = new WeeklySummary();
-                    summary.Week = week;
+                    summary.Week = detail.Week;
                     summary.Truck = detail.Truck;
                 }
 
@@ -236,24 +254,6 @@ namespace Trucks
             revenue += (detail.Linehaul * 0.50);
             revenue += (detail.Accesorials * 0.20);            
             return revenue;
-        }
-
-        private int GetWeek(DateTime date)
-        {
-            //source: https://stackoverflow.com/questions/11154673/get-the-correct-week-number-of-a-given-date
-
-            // Seriously cheat.  If its Monday, Tuesday or Wednesday, then it'll 
-            // be the same week# as whatever Thursday, Friday or Saturday are,
-            // and we always get those right
-            DayOfWeek day = CultureInfo.InvariantCulture.Calendar.GetDayOfWeek(date);
-            if (day >= DayOfWeek.Monday && day <= DayOfWeek.Wednesday)
-            {
-                date = date.AddDays(3);
-            }
-
-            // Return the week of our adjusted day
-            return CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(
-                date, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
         }
     }
 }
