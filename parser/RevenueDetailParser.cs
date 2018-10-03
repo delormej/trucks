@@ -135,6 +135,7 @@ namespace Trucks
                     {
                         string[] row = line.Split(',');                    
                         RevenueDetail detail = ParseRow(row);
+                        detail.Truck = truckId;
                         truckRevenue.Add(detail);
                         Console.WriteLine("{0}, {1}, {2:MM/dd/yyyy}, {3}", truckId, 
                             detail.Week, detail.Date, GetRevenue(detail));                        

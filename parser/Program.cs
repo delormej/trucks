@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Trucks
 {
@@ -7,17 +9,6 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
-            using (ExcelWorkbook workbook = new ExcelWorkbook())
-            {
-                workbook.Open("Settlement.xlsx");
-                //string value = workbook.GetCellValue("Week_27", "B1");
-                workbook.UpdateCellValue("Week_27", "B1", "Johnny Cheekie");
-                workbook.UpdateCellValue("Week_27", "C15", "100.91");
-                
-                //Console.WriteLine(value);
-            }
-            return;
-
             if (args.Length < 1)
             {
                 ShowUsage();
@@ -32,8 +23,39 @@ namespace Trucks
             if (csv.Length > 0)
             {
                 RevenueDetailParser parser = new RevenueDetailParser();
-                parser.LoadFromCsv(csv); 
+                List<RevenueDetail> details = parser.LoadFromCsv(csv); 
+                CreateSettlementStatements(details);
             }
+        }
+
+        private static void CreateSettlementStatements(List<RevenueDetail> details)
+        {
+            // select by truck
+            var truckLoads = 
+                from load in details
+                group load by load.Truck into g 
+                orderby g.Key
+                select g;
+
+            foreach (IGrouping<string, RevenueDetail> g in truckLoads)
+            {
+                Console.WriteLine("Group: " + g.Key);
+                foreach (var load in g)
+                {
+                    Console.WriteLine("\t{0}, {1}", load.Truck, load.Date);
+                }
+            }
+            return;
+
+            using (ExcelWorkbook workbook = new ExcelWorkbook())
+            {
+                workbook.Open("Settlement.xlsx");
+                //string value = workbook.GetCellValue("Week_27", "B1");
+                workbook.UpdateCellValue("Week_27", "B1", "Johnny Cheekie");
+                workbook.UpdateCellValue("Week_27", "C15", "100.91");
+                
+                //Console.WriteLine(value);
+            }           
         }
 
         private static void ShowUsage()
