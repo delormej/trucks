@@ -9,6 +9,10 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
+            SettlementHistoryWorkbook s = new SettlementHistoryWorkbook();
+            s.GetValue("converted.xlsx");
+            return;
+
             if (args.Length < 1)
             {
                 ShowUsage();

@@ -12,8 +12,8 @@ namespace Trucks
 
     public class ExcelWorkbook : IDisposable
     {
-        private SpreadsheetDocument document = null;
-        private WorkbookPart wbPart = null;
+        protected SpreadsheetDocument document = null;
+        protected WorkbookPart wbPart = null;
 
         public ExcelWorkbook()
         {
