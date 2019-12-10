@@ -103,7 +103,7 @@ namespace Trucks
                 }
             }
             return value;
-        }        
+        }
 
         public void UpdateCellValue(string sheetName, string addressName, string value)
         {

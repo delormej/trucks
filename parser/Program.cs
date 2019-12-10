@@ -9,8 +9,9 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
-            SettlementHistoryWorkbook s = new SettlementHistoryWorkbook();
-            s.GetValue("converted.xlsx");
+            SettlementHistoryParser shParser = new SettlementHistoryParser("converted.xlsx", "CD2222", DateTime.Now);
+            SettlementHistory settlement = shParser.Parse();
+            System.Console.WriteLine(settlement.ToString());
             return;
 
             if (args.Length < 1)
