@@ -8,10 +8,9 @@ namespace Trucks
     [System.AttributeUsage(System.AttributeTargets.Property)]
     public class SheetColumnAttribute : System.Attribute
     {
-        public string Column, Header;
-        public SheetColumnAttribute(string column, string header)
+        public string Header;
+        public SheetColumnAttribute(string header)
         {
-            this.Column = column;
             this.Header = header;
         }
     }
@@ -21,30 +20,83 @@ namespace Trucks
         public Credit() {}
         public Credit(string settlementId) : base(settlementId){}
 
-        [SheetColumn("A", "PRO #")]
+        [SheetColumn("PRO #")]
         public string ProNumber { get; set; }
 
-        [SheetColumn("B", "DELV DT")]
+        [SheetColumn("DELV DT")]
         public string DeliveryDate { get; set; }
 
-        [SheetColumn("C", "CARR/DRIVER")]
+        [SheetColumn("CARR/DRIVER")]
         public string Driver { get; set; }        
         
-        [SheetColumn("D", "CARR INV/TRK")]
+        [SheetColumn("CARR INV/TRK")]
         public int TruckId { get; set; }        
 
-        [SheetColumn("E", "RPM")]
+        [SheetColumn("RPM")]
         public double RatePerMile { get; set; }        
 
-        [SheetColumn("F", "MILES")]
+        [SheetColumn("MILES")]
         public int Miles { get; set; }        
 
-        [SheetColumn("G", "EXT AMOUNT")]
+        [SheetColumn("EXT AMOUNT")]
         public double ExtendedAmount { get; set; }        
 
-//						DETENTION	DEADHEAD	STOP OFF	CANADA	LAYOVER	HANDLOAD	TOLLS	BONUS	EMPTY	TOTAL PAID	CREDIT DATE	CREDIT DESCRIPTION	RATE PER MILE	CREDIT AMOUNT	ADV DATE	ADV DESCRIPTION	ADV #	ADV AMOUNT	OTHER
+        [SheetColumn("DETENTION")]
+        public double Detention { get; set; }        
 
+        [SheetColumn("DEADHEAD")]
+        public double DeadHead { get; set; }      
 
+        [SheetColumn("STOP OFF")]
+        public double StopOff { get; set; }      
+
+        [SheetColumn("CANADA")]
+        public double Canada { get; set; }      
+
+        [SheetColumn("LAYOVER")]
+        public double Layover { get; set; }     
+
+        [SheetColumn("HANDLOAD")]
+        public double HandLoad { get; set; }           
+
+        [SheetColumn("TOLLS")]
+        public double Tolls { get; set; }                         
+
+        [SheetColumn("BONUS")]
+        public double Bonus { get; set; }             
+
+        [SheetColumn("EMPTY")]
+        public double Empty { get; set; }             
+
+        [SheetColumn("TOTAL PAID")]
+        public double TotalPaid { get; set; }             
+
+        [SheetColumn("CREDIT DATE")]
+        public string CreditDate { get; set; }             
+
+        [SheetColumn("CREDIT DESCRIPTION")]
+        public string CreditDescriptions { get; set; }             
+
+        [SheetColumn("RATE PER MILE")]
+        public string RatePerMileDescription { get; set; }   
+
+        [SheetColumn("CREDIT AMOUNT")]
+        public double CreditAmount { get; set; }        
+
+        [SheetColumn("ADV DATE")]
+        public string AdvanceDate { get; set; }     
+      
+        [SheetColumn("ADV DESCRIPTION")]
+        public string AdvanceDescription { get; set; }     
+
+        [SheetColumn("ADV #")]
+        public string AdvanceNumber { get; set; }    
+
+        [SheetColumn("ADV AMOUNT")]
+        public double AdvanceAmount { get; set; }      
+
+        [SheetColumn("OTHER")]
+        public double Other { get; set; }     
     }
 
     public class Deduction : SettlementItem
@@ -52,22 +104,22 @@ namespace Trucks
         public Deduction() {}
         public Deduction(string settlementId) : base(settlementId){}
 
-        [SheetColumn("A", "DATE")]
+        [SheetColumn("DATE")]
         public string Date { get; set; }
 
-        [SheetColumn("B", "CARR/DRIVER")]
+        [SheetColumn("CARR/DRIVER")]
         public string Driver { get; set; }
 
-        [SheetColumn("C", "CARR INV/TRK")]
+        [SheetColumn("CARR INV/TRK")]
         public int TruckId { get; set; }
 
-        [SheetColumn("D", "DESCRIPTION")]
+        [SheetColumn("DESCRIPTION")]
         public string Description { get; set; }        
 
-        [SheetColumn("E", "DEDUCTION AMOUNT")]
+        [SheetColumn("DEDUCTION AMOUNT")]
         public double Amount { get; set; }    
 
-        [SheetColumn("F", "TOTAL DEDUCTIONS")]
+        [SheetColumn("TOTAL DEDUCTIONS")]
         public double TotalDeductions { get; set; }
     }
 

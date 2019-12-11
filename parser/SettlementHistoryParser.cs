@@ -45,7 +45,9 @@ namespace Trucks
             List<T> items = new List<T>();
             SettlementHistoryWorkbook.HelperSheet sheet = workbook[sheetName];
             if (sheet != null)
-            {                        
+            {
+                Dictionary<string, PropertyInfo> columnProperties = GetColumnProperties<T>(sheet);
+
                 foreach (SettlementHistoryWorkbook.HelperRow row in sheet.GetRows().Skip(2))
                 {
                     if (IsLastRow<T>(row))
@@ -55,12 +57,35 @@ namespace Trucks
                     item.SettlementId = _settlementId;
                     foreach (SettlementHistoryWorkbook.HelperCell cell in row.GetCells())
                     {
-                        SetValue<T>(item, cell);
+                        if (columnProperties.ContainsKey(cell.Name))
+                        {
+                            PropertyInfo property = columnProperties[cell.Name];
+                            SetValue(property, item, cell);
+                        }
                     }
                     items.Add(item);
                 }
             }            
             return items;
+        }
+
+        private Dictionary<string, PropertyInfo> GetColumnProperties<T>(SettlementHistoryWorkbook.HelperSheet sheet)
+        {
+            Dictionary<string, PropertyInfo> columnProperties = new Dictionary<string, PropertyInfo>();
+
+            // Get Header Row
+            var headerRow = sheet.GetRows().Skip(1).First();
+            if (headerRow == null)
+                throw new ApplicationException($"Unable to get headers for {typeof(T)}");
+            
+            foreach (var cell in headerRow.GetCells())
+            {
+                PropertyInfo property = GetPropertyByHeader<T>(cell.Value);
+                if (property != null)
+                    columnProperties.Add(cell.Name, property);
+            }
+
+            return columnProperties;
         }
 
         private bool IsLastRow<T>(SettlementHistoryWorkbook.HelperRow row)
@@ -81,10 +106,11 @@ namespace Trucks
             return false;
         }
 
-        private void SetValue<T>(T item, SettlementHistoryWorkbook.HelperCell cell)
+        private void SetValue(PropertyInfo property, 
+                SettlementItem item,
+                SettlementHistoryWorkbook.HelperCell cell)
         {
-            PropertyInfo property = GetPropertyByColumn<T>(cell.Name);
-            if (property != null)
+            if (property != null && !string.IsNullOrEmpty(cell.Value))
             {
                 if (property.PropertyType == typeof(int))
                 {
@@ -98,22 +124,24 @@ namespace Trucks
                 {
                     property.SetValue(item, cell.Value);
                 }
-            }
-        }
+            }            
+        }    
 
-        private PropertyInfo GetPropertyByColumn<T>(string column)
+        private PropertyInfo GetPropertyByHeader<T>(string header)
         {
             PropertyInfo[] props = typeof(T).GetProperties();
             foreach (PropertyInfo prop in props)
             {
-                SheetColumnAttribute attrib = prop.GetCustomAttribute(typeof(SheetColumnAttribute)) as SheetColumnAttribute;
-                if (attrib != null && attrib.Column == column)
+                SheetColumnAttribute attrib = prop.GetCustomAttribute(
+                    typeof(SheetColumnAttribute)) as SheetColumnAttribute;
+
+                if (attrib != null && attrib.Header == header)
                 {
                     return prop;
                 }
             }
             return null;
-        }        
+        }                
     }
 
     // internal class Headers<T> where T : SettlementItem

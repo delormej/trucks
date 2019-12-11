@@ -9,7 +9,7 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
-            SettlementHistoryParser shParser = new SettlementHistoryParser("converted.xlsx", "CD2222", DateTime.Now);
+            SettlementHistoryParser shParser = new SettlementHistoryParser("sample/converted.xlsx", "CD2222", DateTime.Now);
             SettlementHistory settlement = shParser.Parse();
             System.Console.WriteLine(settlement.ToString());
             return;
