@@ -7,6 +7,8 @@ namespace Trucks
         public Credit() {}
         public Credit(string settlementId) : base(settlementId){}
 
+        public string id => ProNumber;
+
         [SheetColumn("PRO #")]
         public string ProNumber { get; set; }
 

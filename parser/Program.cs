@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Trucks
 {
@@ -9,27 +10,34 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
-            SettlementHistoryParser shParser = new SettlementHistoryParser("sample/converted.xlsx", "CD2222", DateTime.Now);
-            SettlementHistory settlement = shParser.Parse();
-            System.Console.WriteLine(settlement.ToString());
-            return;
+            // if (args.Length < 1)
+            // {
+            //     ShowUsage();
+            //     return;
+            // }
+            
+            // string file = args[0];
+            // if (!File.Exists(file))
+            //     throw new FileNotFoundException(file);
+            string filename = "sample/converted.xlsx";
+            int companyId = 33357;
+            string settlementId = "CD2224";
+            DateTime settlementDate = DateTime.Parse("9/9/2019");
 
-            if (args.Length < 1)
+            SettlementHistoryParser shParser = new SettlementHistoryParser(filename, settlementId);
+            SettlementHistory settlement = shParser.Parse();
+            settlement.SettlementDate = settlementDate;
+            settlement.CompanyId = companyId;
+            
+            try
             {
-                ShowUsage();
-                return;
+                Repository repository = new Repository();
+                repository.SaveSettlementHistory(settlement).Wait();
+                System.Console.WriteLine("Wrote to table");
             }
-            
-            string file = args[0];
-            if (!File.Exists(file))
-                throw new FileNotFoundException(file);
-            
-            string csv = File.ReadAllText(file);
-            if (csv.Length > 0)
+            catch (Exception e)
             {
-                RevenueDetailParser parser = new RevenueDetailParser();
-                List<RevenueDetail> details = parser.LoadFromCsv(csv); 
-                CreateSettlementStatements(details);
+                System.Console.WriteLine("ERROR: " + e);
             }
         }
 
@@ -50,7 +58,6 @@ namespace Trucks
                     Console.WriteLine("\t{0}, {1}", load.Truck, load.Date);
                 }
             }
-            return;
 
             using (ExcelWorkbook workbook = new ExcelWorkbook())
             {
@@ -65,7 +72,7 @@ namespace Trucks
 
         private static void ShowUsage()
         {
-            Console.WriteLine("parser <input.csv>");
+            
         }
     }
 }

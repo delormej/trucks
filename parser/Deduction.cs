@@ -7,6 +7,9 @@ namespace Trucks
         public Deduction() {}
         public Deduction(string settlementId) : base(settlementId){}
 
+        // Required for CosmosDb
+        public string id { get { return Guid.NewGuid().ToString(); } set {} }
+
         [SheetColumn("DATE")]
         public string Date { get; set; }
 

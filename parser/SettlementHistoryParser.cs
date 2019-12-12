@@ -9,13 +9,11 @@ namespace Trucks
     {
         private string _filename;
         private string _settlementId;
-        private DateTime _date;
 
-        public SettlementHistoryParser(string filename, string settlementId, DateTime date)
+        public SettlementHistoryParser(string filename, string settlementId)
         {
             this._filename = filename;
             this._settlementId = settlementId;
-            this._date = date;
         }
 
         public SettlementHistory Parse()
@@ -24,7 +22,6 @@ namespace Trucks
             
             SettlementHistory settlement = new SettlementHistory();
             settlement.SettlementId = this._settlementId;          
-            settlement.SettlementDate = this._date;
             settlement.Credits = GetCredits(workbook);
             settlement.Deductions = GetDeductions(workbook);
             return settlement;

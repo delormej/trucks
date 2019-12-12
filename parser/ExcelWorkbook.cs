@@ -26,11 +26,15 @@ namespace Trucks
 
         public void Dispose()
         {
-            if (document != null)
+            try 
             {
-                document.Close();
-                document.Dispose();
+                if (document != null)
+                {
+                    document.Close();
+                    document.Dispose();
+                }
             }
+            catch{/*ignore any errors here*/}
         }
 
         public void Open(string fileName)
