@@ -44,17 +44,36 @@ namespace Trucks
         private async Task AddItemsToContainerAsync<T>(T value, string containerId)
         {
             Container container = cosmosClient.GetContainer(databaseId, containerId);
-            ItemResponse<T> response = 
-                await container.CreateItemAsync<T>(value);
+            ItemResponse<T> response = await container.CreateItemAsync<T>(value);
         }    
 
         public async Task SaveSettlementHistory(SettlementHistory settlement)
         {
             cosmosClient = new CosmosClient(endpointUrl, authorizationKey);
+            await EnsureDatabaseAsync();
+            await InsertSettlementAsync(settlement);
+        }    
+
+        /// <summary>
+        /// Ensures the database structure is in place.
+        /// </summary>
+        private async Task EnsureDatabaseAsync()
+        {
             await CreateDatabaseAsync();
             await CreateContainerAsync("SettlementHistory", "/CompanyId");
             await CreateContainerAsync("Credit", "/SettlementId");
-            await CreateContainerAsync("Deduction", "/SettlementId");
+            await CreateContainerAsync("Deduction", "/SettlementId");            
+        }
+
+        private async Task InsertSettlementAsync(SettlementHistory settlement)
+        {
+            //
+            // The challenge with this is that it's not a transaction and compensating
+            // logic will need to be written in the event of a FAILURE.
+            // Alternatively, we could write a JavaScript stored procedure which takes
+            // the fully hydrated deep Settlement object and does this on the server side
+            // encapsulating it in a transaction.
+            //
 
             List<Task> inserts = new List<Task>();
             foreach (Credit credit in settlement.Credits)
@@ -65,12 +84,13 @@ namespace Trucks
             {
                 inserts.Add(AddItemsToContainerAsync<Deduction>(deduction, "Deduction"));
             }
-
             await Task.WhenAll(inserts);
+
             // Remove these for shallow insert.
             settlement.Credits = null;
             settlement.Deductions = null;
-            await AddItemsToContainerAsync<SettlementHistory>(settlement, "SettlementHistory");
-        }    
+
+            await AddItemsToContainerAsync<SettlementHistory>(settlement, "SettlementHistory");            
+        }
     }
 }
