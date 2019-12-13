@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Cosmos" Version="4.0.0-preview" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="2.8.1" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.17" />
   </ItemGroup>
 
 </Project>

@@ -10,6 +10,10 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
+            PayrollHistHtmlParser payrollParser = new PayrollHistHtmlParser();
+            payrollParser.Parse("./PayrollHist.html");
+            return;
+
             // if (args.Length < 1)
             // {
             //     ShowUsage();

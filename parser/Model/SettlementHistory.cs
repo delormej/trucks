@@ -16,6 +16,9 @@ namespace Trucks
         // all trucks: 33357, 44510 
         // 49809 only trucks: 33451, 33438, 33446, 33425, 33426 
         public int CompanyId { get; set; } 
+        public double CheckAmount { get; set; }
+        public double ARAmount { get; set; }
+        public double DeductionAmount { get; set; }
         public List<Credit> Credits { get; set; }
         public List<Deduction> Deductions { get; set; }
     }
