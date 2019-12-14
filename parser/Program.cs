@@ -10,25 +10,19 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
-            if (args.Length <= 3)
+            string company = args[1]; // "53357";
+            string password = args[2]; 
+            try
             {
-                System.Console.WriteLine("Pass user and password on cli.");
-                return;
-            }
-            else
-            {
-                string company = args[1] ?? "53357";
-                string password = args[2];
-
-                PantherClient client = new PantherClient();
-                var task = Task.Run(async () => await client.LoginAsync(company, password));
+                var task = Task.Run( () => DownloadSettlementsAsync(company, password) );
                 task.Wait();
                 if (task.Exception != null)
                     throw task.Exception;
-
-                bool loggedIn = task.Result;
             }
-
+            catch (Exception e)
+            {
+                System.Console.WriteLine("ERROR: " + e.Message);
+            }
             return;
 
             PayrollHistHtmlParser payrollParser = new PayrollHistHtmlParser();
@@ -63,6 +57,16 @@ namespace Trucks
             {
                 System.Console.WriteLine("ERROR: " + e);
             }
+        }
+
+        private static async Task DownloadSettlementsAsync(string company, string password)
+        {
+            PantherClient client = new PantherClient();
+            bool loggedIn = await client.LoginAsync(company, password);
+            if (!loggedIn)
+                throw new ApplicationException("Unable to login with credentials.");
+            string payrollHistHtml = await client.GetPayrollHistAsync();
+            System.Console.WriteLine(payrollHistHtml);
         }
 
         private static void CreateSettlementStatements(List<RevenueDetail> details)

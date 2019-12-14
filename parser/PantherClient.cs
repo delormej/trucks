@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Net;
@@ -9,20 +10,25 @@ namespace Trucks
 {
     public class PantherClient
     {
-        private const string patherBaseUrl = "http://fleetweb.pantherpremium.com";
+        private const string pantherBaseUrl = "http://fleetweb.pantherpremium.com";
         private string sessionId;
         private DateTime sessionExpires;
+        HttpClientHandler clientHandler;
+        HttpClient client;
+
+        public PantherClient()
+        {
+            clientHandler = new HttpClientHandler();
+            clientHandler.CookieContainer = new CookieContainer();            
+            client = new HttpClient(clientHandler);
+        }
 
         public async Task<bool> LoginAsync(string companyId, string password)
         {
             bool isLoggedIn = false;
             
-            string loginUrl = patherBaseUrl + "/Login/Login";
+            string loginUrl = pantherBaseUrl + "/Login/Login";
             string content = $"UserID={companyId}&Password={password}&RememberMe=false";
-
-            var clientHandler = new HttpClientHandler();
-            clientHandler.CookieContainer = new CookieContainer();            
-            HttpClient client = new HttpClient(clientHandler);
             StringContent httpContent = new StringContent(content);
             httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
             
@@ -41,15 +47,25 @@ namespace Trucks
                     break;
                 }
             }
-            // IEnumerable<string> cookies; 
-            // response.Headers.TryGetValues("Set-Cookie", out cookies);
-
-            // foreach(var cookie in cookies)
-            // {
-            //     System.Console.WriteLine(cookie);
-            // }
-
             return isLoggedIn;
+        }
+    
+        public Task<string> GetPayrollHistAsync()
+        {
+            string uri = pantherBaseUrl + "/Financial/PayrollHist";
+            return client.GetStringAsync(uri);
+        }
+
+        /// <summary>
+        /// Downloads an Excel file to disk and returns the path of the saved file.
+        /// </summary>
+        public async Task<string> DownloadSettlementReport(string checkNumber)
+        {
+            string uri = pantherBaseUrl + $"/Financial/DownloadSettlementReport?ChkNo={checkNumber}";
+            byte[] bytes = await client.GetByteArrayAsync(uri);
+            string filename = $"{checkNumber}.xls";
+            File.WriteAllBytes(filename, bytes);
+            return filename;
         }
     }
 }
