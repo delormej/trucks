@@ -10,7 +10,7 @@ namespace Trucks
         public void Parse(string html)
         {
 		    HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
-            doc.LoadHtml(html)
+            doc.LoadHtml(html);
             string path = "html/body/div[@class='container']/div[@class='row-fluid']/div[@class='span10']/div[@class='row-fluid']/table/tbody/tr";
             var rows = doc.DocumentNode.SelectNodes(path);
             if (rows == null)

@@ -10,9 +10,29 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
+            if (args.Length <= 3)
+            {
+                System.Console.WriteLine("Pass user and password on cli.");
+                return;
+            }
+            else
+            {
+                string company = args[1] ?? "53357";
+                string password = args[2];
+
+                PantherClient client = new PantherClient();
+                var task = Task.Run(async () => await client.LoginAsync(company, password));
+                task.Wait();
+                if (task.Exception != null)
+                    throw task.Exception;
+
+                bool loggedIn = task.Result;
+            }
+
+            return;
+
             PayrollHistHtmlParser payrollParser = new PayrollHistHtmlParser();
             payrollParser.Parse("./PayrollHist.html");
-            return;
 
             // if (args.Length < 1)
             // {
