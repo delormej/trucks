@@ -10,8 +10,10 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
-            string company = args[1]; // "53357";
+            string company = args[1]; 
             string password = args[2]; 
+            string convertApiKey = args[3];
+
             try
             {
                 var task = Task.Run( () => DownloadSettlementsAsync(company, password) );
@@ -25,8 +27,7 @@ namespace Trucks
             }
             return;
 
-            PayrollHistHtmlParser payrollParser = new PayrollHistHtmlParser();
-            payrollParser.Parse("./PayrollHist.html");
+            
 
             // if (args.Length < 1)
             // {
@@ -62,11 +63,21 @@ namespace Trucks
         private static async Task DownloadSettlementsAsync(string company, string password)
         {
             PantherClient client = new PantherClient();
+            
             bool loggedIn = await client.LoginAsync(company, password);
             if (!loggedIn)
                 throw new ApplicationException("Unable to login with credentials.");
+            
             string payrollHistHtml = await client.GetPayrollHistAsync();
-            System.Console.WriteLine(payrollHistHtml);
+            
+            PayrollHistHtmlParser parser = new PayrollHistHtmlParser();
+            List<SettlementHistory> settlements = parser.Parse(payrollHistHtml);
+            foreach (SettlementHistory settlement in 
+                settlements.OrderByDescending(s => s.SettlementDate).Take(2))
+            {
+                string xls = await client.DownloadSettlementReportAsync(settlement.SettlementId);
+                System.Console.WriteLine($"{settlement.SettlementId}: {xls}");
+            }
         }
 
         private static void CreateSettlementStatements(List<RevenueDetail> details)

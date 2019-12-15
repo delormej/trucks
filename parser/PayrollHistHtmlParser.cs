@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using HtmlAgilityPack;
 
 namespace Trucks
@@ -7,23 +8,24 @@ namespace Trucks
     {
         public PayrollHistHtmlParser(){}
 
-        public void Parse(string html)
+        public List<SettlementHistory> Parse(string html)
         {
 		    HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
             doc.LoadHtml(html);
             string path = "html/body/div[@class='container']/div[@class='row-fluid']/div[@class='span10']/div[@class='row-fluid']/table/tbody/tr";
             var rows = doc.DocumentNode.SelectNodes(path);
             if (rows == null)
-            {
-                System.Console.WriteLine("Empty");
-                return;
-            }
+                return null;
 
+            List<SettlementHistory> settlements = new List<SettlementHistory>();
             foreach (var row in rows)
             {
                 var nodes = row.SelectNodes("td");
                 SettlementHistory settlement = ParseSettlement(nodes);
+                if (settlement != null)
+                    settlements.Add(settlement);
             }
+            return settlements;
         }
 
         private SettlementHistory ParseSettlement(HtmlNodeCollection nodes)
