@@ -92,7 +92,7 @@ namespace Trucks
             {
                 // queue download, then save to db
                 string convertedFile = job.Item.SettlementId + ".xslx";
-                var download = converter.DownloadAsync(job.JobId.ToString(), convertedFile);
+                var download = converter.DownloadAsync(job.JobId, convertedFile);
                 download.Wait();
                 pendingDownload.Remove(job.JobId);
                 SettlementHistoryParser parser = new SettlementHistoryParser(convertedFile, job.Item.SettlementId);

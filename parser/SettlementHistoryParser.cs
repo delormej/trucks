@@ -24,6 +24,7 @@ namespace Trucks
             settlement.SettlementId = this._settlementId;          
             settlement.Credits = GetCredits(workbook);
             settlement.Deductions = GetDeductions(workbook);
+            settlement.SettlementDate = GetLastCreditDate(settlement);
             return settlement;
         }
 
@@ -36,6 +37,26 @@ namespace Trucks
         {
             return GetSettlementItemsFromSheet<Deduction>("DEDUCTIONS", workbook);
         }         
+
+        private DateTime GetLastCreditDate(SettlementHistory settlement)
+        {
+            DateTime? creditDate = ConvertDate(
+                settlement.Credits.OrderByDescending(s => ConvertDate(s.CreditDate))
+                    .FirstOrDefault().CreditDate);
+
+            if (creditDate != null)
+                return (DateTime)creditDate;
+            else
+                return settlement.SettlementDate;
+
+            DateTime? ConvertDate(string date)
+            {
+                if (!string.IsNullOrEmpty(date))
+                    return DateTime.Parse(date);
+                else 
+                    return null;
+            }
+        }
 
         public List<T> GetSettlementItemsFromSheet<T>(string sheetName, SettlementHistoryWorkbook workbook) where T : SettlementItem, new()
         {

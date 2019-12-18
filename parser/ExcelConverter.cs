@@ -5,6 +5,8 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Text.Json;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Trucks
 {
@@ -58,9 +60,33 @@ namespace Trucks
             }
         }   
 
-        public async Task DownloadAsync(string fileId, string outputFile)
+        public async Task<IEnumerable<ZamzarResult>> QueryAllAsync()
         {
-            string url = endpoint + "/v1/files/" + fileId + "/content";
+            string url = endpoint + "/v1/jobs/";
+            List<ZamzarResult> results = null;
+
+            using (HttpClientHandler handler = new HttpClientHandler { Credentials = new NetworkCredential(key, "")})
+            using (HttpClient client = new HttpClient(handler))
+            using (HttpResponseMessage response = await client.GetAsync(url))
+            using (HttpContent content = response.Content)
+            {
+                string data = await content.ReadAsStringAsync();
+                JsonDocument doc = JsonDocument.Parse(data);
+                if (doc != null)
+                {
+                    var jobs = doc.RootElement.GetProperty("data");
+                    results = JsonSerializer.Deserialize<List<ZamzarResult>>(jobs.GetRawText());
+                }
+            }
+            
+            // Get only the succesful ones.
+            var successfulResults = results.Where(r => r.status == "successful");
+            return successfulResults;
+        }
+
+        public async Task DownloadAsync(int fileId, string outputFile)
+        {
+            string url = endpoint + "/v1/files/" + fileId.ToString() + "/content";
 
             using (HttpClientHandler handler = new HttpClientHandler { Credentials = new NetworkCredential(key, "") })
             using (HttpClient client = new HttpClient(handler))
@@ -79,9 +105,17 @@ namespace Trucks
         public int id { get; set; }
         public string status { get; set; }
 
+        public TargetFiles[] target_files { get; set; }        
+
         public override string ToString()
         {
             return $"{id}:{status}";
         }
+    }
+
+    public class TargetFiles
+    {
+        public int id { get; set; }
+        public string name { get; set; }
     }
 }

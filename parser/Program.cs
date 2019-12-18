@@ -13,7 +13,11 @@ namespace Trucks
             string company = Environment.GetEnvironmentVariable("TRUCKCOMPANY") ?? (args.Length > 1 ? args[1] : "");
             string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD") ?? (args.Length > 1 ? args[2] : "");
             string convertApiKey = Environment.GetEnvironmentVariable("ZAMZARKEY") ?? (args.Length > 3 ? args[3] : "");
-            
+                       
+            var task2 = Task.Run( () => ProcessUploaded(company, convertApiKey) );
+            task2.Wait();
+            return;
+
             var task = ProcessAsync(company, password, convertApiKey);
             task.Wait();
             System.Console.WriteLine("Done");
@@ -50,6 +54,57 @@ namespace Trucks
             }
         }
 
+        // Processes files ready for download from conversion.
+        private static async Task ProcessUploaded(string company, string convertApiKey)
+        {
+            ExcelConverter converter = new ExcelConverter(convertApiKey);
+            Repository repository = new Repository();
+            IEnumerable<ZamzarResult> results = await converter.QueryAllAsync();
+            List<Task> tasks = new List<Task>();
+
+            foreach (ZamzarResult result in results)
+                tasks.Add(ProcessResultAsync(result));
+
+            async Task ProcessResultAsync(ZamzarResult result)
+            {
+                string filename = result.target_files[0].name;
+                if (!File.Exists(filename))
+                    filename = await Download(converter, result);
+                SettlementHistory settlement = Parse(filename);
+                settlement.CompanyId = int.Parse(company);
+                
+                // Store in cosmosdb
+                await repository.SaveSettlementHistoryAsync(settlement);
+                System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");            
+            }
+
+            Task.WaitAll(tasks.ToArray());
+        }
+
+
+        private static async Task<string> Download(ExcelConverter converter, ZamzarResult result)
+        {
+            if (result.target_files.Length == 0)
+                throw new ApplicationException($"Unable to find a file for result: {result}");
+            
+            string filename = result.target_files[0].name;
+            int fileId = result.target_files[0].id;
+            await converter.DownloadAsync(fileId, filename);
+            System.Console.WriteLine($"Downloaded: {filename}");
+
+            return filename;
+        }
+
+        private static SettlementHistory Parse(string filename)
+        {
+            SettlementHistoryParser parser = new SettlementHistoryParser(
+                filename, GetSettlementIdFromFile(filename));
+            SettlementHistory settlement = parser.Parse();
+            System.Console.WriteLine($"Parsed: {filename} with {settlement.Credits.Count} credits.");            
+            
+            return settlement;
+        }
+
         private static async Task ProcessAsync(string company, string pantherPassword, string convertApiKey)
         {
             List<SettlementHistory> settlements = ReadLocalFiles(company); // await DownloadSettlementsAsync(company, pantherPassword);
@@ -76,7 +131,11 @@ namespace Trucks
         private static string GetSettlementIdFromFile(string file)
         {
             string filename = Path.GetFileName(file);
-            return filename.Replace(".xls", "");
+            int i = filename.IndexOf(".xls");
+            if (i <= 0)
+                throw new ApplicationException($"Unable to get SettlmentId from filename: {file}");
+
+            return filename.Substring(0, i);            
         }
 
         private static async Task<List<SettlementHistory>> DownloadSettlementsAsync(string company, string password)

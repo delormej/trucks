@@ -10,6 +10,11 @@ namespace Trucks
             this.SettlementId = settlementId;
         }
 
+        /// <summary>
+        /// Creates a new Guid for Id, needs to be unique.
+        /// </summary>
+        public string id => Guid.NewGuid().ToString();
+
         public string SettlementId { get; set; }    
     }
 }
