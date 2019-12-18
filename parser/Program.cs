@@ -10,24 +10,14 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
-            string company = args[1]; 
-            string password = args[2]; 
-            string convertApiKey = args[3];
-
-            try
-            {
-                var task = Task.Run( () => DownloadSettlementsAsync(company, password) );
-                task.Wait();
-                if (task.Exception != null)
-                    throw task.Exception;
-            }
-            catch (Exception e)
-            {
-                System.Console.WriteLine("ERROR: " + e.Message);
-            }
-            return;
-
+            string company = Environment.GetEnvironmentVariable("TRUCKCOMPANY") ?? (args.Length > 1 ? args[1] : "");
+            string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD") ?? (args.Length > 1 ? args[2] : "");
+            string convertApiKey = Environment.GetEnvironmentVariable("ZAMZARKEY") ?? (args.Length > 3 ? args[3] : "");
             
+            var task = ProcessAsync(company, password, convertApiKey);
+            task.Wait();
+            System.Console.WriteLine("Done");
+            return;
 
             // if (args.Length < 1)
             // {
@@ -51,7 +41,7 @@ namespace Trucks
             try
             {
                 Repository repository = new Repository();
-                repository.SaveSettlementHistory(settlement).Wait();
+                repository.SaveSettlementHistoryAsync(settlement).Wait();
                 System.Console.WriteLine("Wrote to table");
             }
             catch (Exception e)
@@ -60,7 +50,36 @@ namespace Trucks
             }
         }
 
-        private static async Task DownloadSettlementsAsync(string company, string password)
+        private static async Task ProcessAsync(string company, string pantherPassword, string convertApiKey)
+        {
+            List<SettlementHistory> settlements = ReadLocalFiles(company); // await DownloadSettlementsAsync(company, pantherPassword);
+            ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlements, convertApiKey);
+            await orchestrator.StartAsync();
+        }
+
+        private static List<SettlementHistory> ReadLocalFiles(string company)
+        {
+            List<SettlementHistory> settlements = new List<SettlementHistory>();
+            string[] settlementFiles = Directory.GetFiles(company);
+
+            foreach (var file in settlementFiles)
+            {
+                SettlementHistory settlement = new SettlementHistory();
+                settlement.CompanyId = int.Parse(company);
+                settlement.SettlementId = GetSettlementIdFromFile(file);
+                settlements.Add(settlement);
+            }
+
+            return settlements;
+        }
+
+        private static string GetSettlementIdFromFile(string file)
+        {
+            string filename = Path.GetFileName(file);
+            return filename.Replace(".xls", "");
+        }
+
+        private static async Task<List<SettlementHistory>> DownloadSettlementsAsync(string company, string password)
         {
             PantherClient client = new PantherClient();
             
@@ -70,14 +89,15 @@ namespace Trucks
             
             string payrollHistHtml = await client.GetPayrollHistAsync();
             
-            PayrollHistHtmlParser parser = new PayrollHistHtmlParser();
+            PayrollHistHtmlParser parser = new PayrollHistHtmlParser(company);
             List<SettlementHistory> settlements = parser.Parse(payrollHistHtml);
             foreach (SettlementHistory settlement in 
-                settlements.OrderByDescending(s => s.SettlementDate).Take(2))
+                settlements.OrderByDescending(s => s.SettlementDate).Skip(2).Take(5))
             {
-                string xls = await client.DownloadSettlementReportAsync(settlement.SettlementId);
-                System.Console.WriteLine($"{settlement.SettlementId}: {xls}");
+                string xls = await client.DownloadSettlementReportAsync(company, settlement.SettlementId);
+                System.Console.WriteLine($"Downloaded {settlement.SettlementId}: {xls}");
             }
+            return settlements;
         }
 
         private static void CreateSettlementStatements(List<RevenueDetail> details)

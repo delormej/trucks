@@ -6,7 +6,11 @@ namespace Trucks
 {
     public class PayrollHistHtmlParser
     {
-        public PayrollHistHtmlParser(){}
+        private int companyId;
+        public PayrollHistHtmlParser(string company)
+        {
+            this.companyId = int.Parse(company);
+        }
 
         public List<SettlementHistory> Parse(string html)
         {
@@ -34,6 +38,7 @@ namespace Trucks
             if (nodes.Count > 4 && !IsVoid(nodes[5]))
             {
                 settlement = new SettlementHistory();
+                settlement.CompanyId = companyId;
                 settlement.SettlementId = nodes[0].InnerText;
                 settlement.SettlementDate =  ParseDate(nodes[1]);
                 settlement.CheckAmount = ParseDollar(nodes[2]);

@@ -10,20 +10,23 @@ namespace Trucks
 {
     class ExcelConverter
     {
-        const string endpoint = "https://sandbox.zamzar.com/v1/jobs";
+        const string endpoint = "https://sandbox.zamzar.com";
         const string targetFormat = "xlsx";
-        private readonly string apiKey;
+        
+        private readonly string key;
 
         public ExcelConverter(string apiKey)
         {
-            this.apiKey = apiKey; 
+            this.key = apiKey; 
         }   
         // "977abf9c5a3497234a089dadf19e329a3160ae1d"
         // var json = Upload(apiKey, endpoint, sourceFile, targetFormat).Result;
         // Console.WriteLine(json);
         
-        public async Task<ZamzarResult> Upload(string key, string url, string sourceFile, string targetFormat)
+        public async Task<ZamzarResult> UploadAsync(string sourceFile)
         {
+            const string url = endpoint + "/v1/jobs";
+
             using (HttpClientHandler handler = new HttpClientHandler { Credentials = new NetworkCredential(key, "") })
             using (HttpClient client = new HttpClient(handler))
             {
@@ -40,8 +43,10 @@ namespace Trucks
             }
         }
 
-        public async Task<ZamzarResult> Query(string key, string url)
+        public async Task<ZamzarResult> QueryAsync(int jobId)
         {
+            string url = endpoint + "/v1/jobs/" + jobId.ToString();
+
             using (HttpClientHandler handler = new HttpClientHandler { Credentials = new NetworkCredential(key, "")})
             using (HttpClient client = new HttpClient(handler))
             using (HttpResponseMessage response = await client.GetAsync(url))
@@ -53,14 +58,16 @@ namespace Trucks
             }
         }   
 
-        public async Task Download(string key, string url, string file)
+        public async Task DownloadAsync(string fileId, string outputFile)
         {
+            string url = endpoint + "/v1/files/" + fileId + "/content";
+
             using (HttpClientHandler handler = new HttpClientHandler { Credentials = new NetworkCredential(key, "") })
             using (HttpClient client = new HttpClient(handler))
             using (HttpResponseMessage response = await client.GetAsync(url))
             using (HttpContent content = response.Content)
             using (Stream stream = await content.ReadAsStreamAsync())
-            using (FileStream writer = File.Create(file))
+            using (FileStream writer = File.Create(outputFile))
             {
                 stream.CopyTo(writer);
             }

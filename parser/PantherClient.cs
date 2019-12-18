@@ -59,11 +59,12 @@ namespace Trucks
         /// <summary>
         /// Downloads an Excel file to disk and returns the path of the saved file.
         /// </summary>
-        public async Task<string> DownloadSettlementReportAsync(string checkNumber)
+        public async Task<string> DownloadSettlementReportAsync(string company, string checkNumber)
         {
+            Directory.CreateDirectory(company);
             string uri = pantherBaseUrl + $"/Financial/DownloadSettlementReport?ChkNo={checkNumber}";
             byte[] bytes = await client.GetByteArrayAsync(uri);
-            string filename = $"{checkNumber}.xls";
+            string filename = Path.Join(company, $"{checkNumber}.xls");
             File.WriteAllBytes(filename, bytes);
             return filename;
         }

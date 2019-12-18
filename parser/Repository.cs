@@ -47,7 +47,7 @@ namespace Trucks
             ItemResponse<T> response = await container.CreateItemAsync<T>(value);
         }    
 
-        public async Task SaveSettlementHistory(SettlementHistory settlement)
+        public async Task SaveSettlementHistoryAsync(SettlementHistory settlement)
         {
             cosmosClient = new CosmosClient(endpointUrl, authorizationKey);
             await EnsureDatabaseAsync();
