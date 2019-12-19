@@ -14,8 +14,7 @@ namespace Trucks
             string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD") ?? (args.Length > 1 ? args[2] : "");
             string convertApiKey = Environment.GetEnvironmentVariable("ZAMZARKEY") ?? (args.Length > 3 ? args[3] : "");
                        
-            var task2 = Task.Run( () => ProcessUploaded(company, convertApiKey) );
-            task2.Wait();
+            ProcessUploaded(company, convertApiKey);
             return;
 
             // var task = ProcessAsync(company, password, convertApiKey);
@@ -26,15 +25,26 @@ namespace Trucks
         }
 
         // Processes files ready for download from conversion.
-        private static async Task ProcessUploaded(string company, string convertApiKey)
+        private static void ProcessUploaded(string company, string convertApiKey)
         {
             ExcelConverter converter = new ExcelConverter(convertApiKey);
             Repository repository = new Repository();
-            IEnumerable<ZamzarResult> results = await converter.QueryAllAsync();
-            List<Task> tasks = new List<Task>();
 
+            // Kick these two off async.
+            var getConverterResults = converter.QueryAllAsync();
+            var getSavedSettlements = repository.GetSettlementsAsync();
+            Task.WaitAll(getConverterResults, getSavedSettlements);
+
+            IEnumerable<ZamzarResult> results = getConverterResults.Result;
+            List<SettlementHistory> savedSettlements = getSavedSettlements.Result;
+
+            List<Task> tasks = new List<Task>();
             foreach (ZamzarResult result in results)
-                tasks.Add(ProcessResultAsync(result));
+            {
+                if (!AlreadySaved(result, savedSettlements))
+                    tasks.Add(ProcessResultAsync(result));
+            }
+            Task.WaitAll(tasks.ToArray());
 
             async Task ProcessResultAsync(ZamzarResult result)
             {
@@ -48,10 +58,14 @@ namespace Trucks
                 await repository.SaveSettlementHistoryAsync(settlement);
                 System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");            
             }
-
-            Task.WaitAll(tasks.ToArray());
         }
 
+        private static bool AlreadySaved(ZamzarResult result, List<SettlementHistory> settlements)
+        {
+            string settlementId = GetSettlementIdFromFile(result.target_files[0].name);
+            bool exists = (settlements.Where(s => s.SettlementId == settlementId).Count() > 0);
+            return exists;
+        }
 
         private static async Task<string> Download(ExcelConverter converter, ZamzarResult result)
         {

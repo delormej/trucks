@@ -13,8 +13,6 @@ namespace Trucks
         private string authorizationKey = Environment.GetEnvironmentVariable("TRUCKDBKEY");
         private const string databaseId = "trucks";
 
-        private CosmosClient cosmosClient;
-
         public Repository()
         {
             if (authorizationKey == null)
@@ -22,12 +20,60 @@ namespace Trucks
         }
 
         /// <summary>
+        /// Ensures the database structure is in place.
+        /// </summary>
+        public async Task EnsureDatabaseAsync()
+        {
+            using (CosmosClient cosmosClient = GetCosmosClient())
+            {
+                await CreateDatabaseAsync();
+                await CreateContainerAsync("SettlementHistory", "/CompanyId");
+                await CreateContainerAsync("Credit", "/SettlementId");
+                await CreateContainerAsync("Deduction", "/SettlementId");            
+            }
+        }
+
+        public async Task<List<SettlementHistory>> GetSettlementsAsync()
+        {
+            List<SettlementHistory> settlements = new List<SettlementHistory>();
+            using (CosmosClient cosmosClient = GetCosmosClient())
+            {
+                var sqlQueryText = "SELECT h.id FROM SettlementHistory h";
+
+                Container container = cosmosClient.GetContainer(databaseId, "SettlementHistory");
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
+                
+                await foreach (SettlementHistory settlement in 
+                    container.GetItemQueryIterator<SettlementHistory>(queryDefinition))
+                {
+                    settlements.Add(settlement);
+                    Console.WriteLine("\tRead {0}\n", settlement);
+                }
+            }
+            return settlements;
+        }
+
+        public async Task SaveSettlementHistoryAsync(SettlementHistory settlement)
+        {
+            try
+            {
+                await InsertSettlementAsync(settlement);
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine($"Error attempting to write settlement {settlement.SettlementId} to CosmosDb\n\t"+ e.Message);
+                throw e;
+            }
+        } 
+
+
+        /// <summary>
         /// Create the database if it does not exist
         /// </summary>
         private async Task CreateDatabaseAsync()
         {
             // Create a new database
-            using (cosmosClient = new CosmosClient(endpointUrl, authorizationKey))
+            using (CosmosClient cosmosClient = GetCosmosClient())
             {
                 Database database = await cosmosClient.CreateDatabaseIfNotExistsAsync(databaseId);
                 Console.WriteLine("Created Database: {0}\n", database.Id);
@@ -42,7 +88,7 @@ namespace Trucks
         private async Task CreateContainerAsync(string containerId, string partitionKeyPath)
         {
             // Create a new container
-            using (cosmosClient = new CosmosClient(endpointUrl, authorizationKey))
+            using (CosmosClient cosmosClient = GetCosmosClient())
             {
                 Container container = await cosmosClient.GetDatabase(databaseId)
                     .CreateContainerIfNotExistsAsync(containerId, partitionKeyPath);
@@ -53,7 +99,7 @@ namespace Trucks
         /// <summary>
         /// Add Family items to the container
         /// </summary>
-        private async Task AddItemsToContainerAsync<T>(T value, string containerId)
+        private async Task AddItemsToContainerAsync<T>(CosmosClient cosmosClient, T value, string containerId)
         {
             try
             {
@@ -65,35 +111,7 @@ namespace Trucks
                 string valueText = System.Text.Json.JsonSerializer.Serialize(value, typeof(T));
                 System.Console.WriteLine($"Unable to save {valueText} in {containerId}, error:\n" + e.Message + "\n" + e.StackTrace);
             }
-        }    
-
-        public async Task SaveSettlementHistoryAsync(SettlementHistory settlement)
-        {
-            try
-            {
-                await EnsureDatabaseAsync();
-                await InsertSettlementAsync(settlement);
-            }
-            catch (Exception e)
-            {
-                System.Console.WriteLine($"Error attempting to write settlement {settlement.SettlementId} to CosmosDb\n\t"+ e.Message);
-                throw e;
-            }
-        }    
-
-        /// <summary>
-        /// Ensures the database structure is in place.
-        /// </summary>
-        private async Task EnsureDatabaseAsync()
-        {
-            using (cosmosClient = new CosmosClient(endpointUrl, authorizationKey))
-            {
-                await CreateDatabaseAsync();
-                await CreateContainerAsync("SettlementHistory", "/CompanyId");
-                await CreateContainerAsync("Credit", "/SettlementId");
-                await CreateContainerAsync("Deduction", "/SettlementId");            
-            }
-        }
+        }       
 
         private async Task InsertSettlementAsync(SettlementHistory settlement)
         {
@@ -105,16 +123,16 @@ namespace Trucks
             // encapsulating it in a transaction.
             //
 
-            using (cosmosClient = new CosmosClient(endpointUrl, authorizationKey))
+            using (CosmosClient cosmosClient = GetCosmosClient())
             {
                 List<Task> inserts = new List<Task>();
                 foreach (Credit credit in settlement.Credits)
                 {
-                    inserts.Add(AddItemsToContainerAsync<Credit>(credit, "Credit"));
+                    inserts.Add(AddItemsToContainerAsync<Credit>(cosmosClient, credit, "Credit"));
                 }
                 foreach (Deduction deduction in settlement.Deductions)
                 {
-                    inserts.Add(AddItemsToContainerAsync<Deduction>(deduction, "Deduction"));
+                    inserts.Add(AddItemsToContainerAsync<Deduction>(cosmosClient, deduction, "Deduction"));
                 }
                 await Task.WhenAll(inserts);
 
@@ -122,8 +140,13 @@ namespace Trucks
                 settlement.Credits = null;
                 settlement.Deductions = null;
 
-                await AddItemsToContainerAsync<SettlementHistory>(settlement, "SettlementHistory");            
+                await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");            
             }
         }
+
+        private CosmosClient GetCosmosClient()
+        {
+            return new CosmosClient(endpointUrl, authorizationKey);
+        }        
     }
 }
