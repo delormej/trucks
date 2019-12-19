@@ -18,40 +18,11 @@ namespace Trucks
             task2.Wait();
             return;
 
-            var task = ProcessAsync(company, password, convertApiKey);
-            task.Wait();
-            System.Console.WriteLine("Done");
-            return;
-
-            // if (args.Length < 1)
-            // {
-            //     ShowUsage();
-            //     return;
-            // }
-            
-            // string file = args[0];
-            // if (!File.Exists(file))
-            //     throw new FileNotFoundException(file);
-            string filename = "sample/converted.xlsx";
-            int companyId = 33357;
-            string settlementId = "CD2224";
-            DateTime settlementDate = DateTime.Parse("9/9/2019");
-
-            SettlementHistoryParser shParser = new SettlementHistoryParser(filename, settlementId);
-            SettlementHistory settlement = shParser.Parse();
-            settlement.SettlementDate = settlementDate;
-            settlement.CompanyId = companyId;
-            
-            try
-            {
-                Repository repository = new Repository();
-                repository.SaveSettlementHistoryAsync(settlement).Wait();
-                System.Console.WriteLine("Wrote to table");
-            }
-            catch (Exception e)
-            {
-                System.Console.WriteLine("ERROR: " + e);
-            }
+            // var task = ProcessAsync(company, password, convertApiKey);
+            // task.Wait();
+            // System.Console.WriteLine("Done");
+            // return;
+           
         }
 
         // Processes files ready for download from conversion.
@@ -107,7 +78,7 @@ namespace Trucks
 
         private static async Task ProcessAsync(string company, string pantherPassword, string convertApiKey)
         {
-            List<SettlementHistory> settlements = ReadLocalFiles(company); // await DownloadSettlementsAsync(company, pantherPassword);
+            List<SettlementHistory> settlements = await DownloadSettlementsAsync(company, pantherPassword); // ReadLocalFiles(company); // 
             ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlements, convertApiKey);
             await orchestrator.StartAsync();
         }
@@ -150,13 +121,16 @@ namespace Trucks
             
             PayrollHistHtmlParser parser = new PayrollHistHtmlParser(company);
             List<SettlementHistory> settlements = parser.Parse(payrollHistHtml);
-            foreach (SettlementHistory settlement in 
-                settlements.OrderByDescending(s => s.SettlementDate).Skip(2).Take(5))
+            IEnumerable<SettlementHistory> workingSettlements = 
+                settlements.OrderByDescending(s => s.SettlementDate).Take(10);
+
+            foreach (SettlementHistory settlement in workingSettlements)
             {
                 string xls = await client.DownloadSettlementReportAsync(company, settlement.SettlementId);
                 System.Console.WriteLine($"Downloaded {settlement.SettlementId}: {xls}");
             }
-            return settlements;
+            
+            return workingSettlements.ToList();
         }
 
         private static void CreateSettlementStatements(List<RevenueDetail> details)

@@ -71,12 +71,12 @@ namespace Trucks
         {
             try
             {
-                // await EnsureDatabaseAsync();
+                await EnsureDatabaseAsync();
                 await InsertSettlementAsync(settlement);
             }
             catch (Exception e)
             {
-                System.Console.WriteLine($"Error attempting to write settlement {settlement.SettlementId} to CosmosDb");
+                System.Console.WriteLine($"Error attempting to write settlement {settlement.SettlementId} to CosmosDb\n\t"+ e.Message);
                 throw e;
             }
         }    
@@ -86,10 +86,13 @@ namespace Trucks
         /// </summary>
         private async Task EnsureDatabaseAsync()
         {
-            await CreateDatabaseAsync();
-            await CreateContainerAsync("SettlementHistory", "/CompanyId");
-            await CreateContainerAsync("Credit", "/SettlementId");
-            await CreateContainerAsync("Deduction", "/SettlementId");            
+            using (cosmosClient = new CosmosClient(endpointUrl, authorizationKey))
+            {
+                await CreateDatabaseAsync();
+                await CreateContainerAsync("SettlementHistory", "/CompanyId");
+                await CreateContainerAsync("Credit", "/SettlementId");
+                await CreateContainerAsync("Deduction", "/SettlementId");            
+            }
         }
 
         private async Task InsertSettlementAsync(SettlementHistory settlement)
