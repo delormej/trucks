@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Collections.Generic;
@@ -9,6 +10,42 @@ namespace Trucks
     {
         private string _filename;
         private string _settlementId;
+
+        public static SettlementHistory Parse(string filename)
+        {
+            SettlementHistoryParser parser = new SettlementHistoryParser(
+                filename, GetSettlementIdFromFile(filename));
+            SettlementHistory settlement = parser.Parse();         
+            
+            return settlement;
+        }
+
+        public static List<SettlementHistory> ParseLocalFiles(string company)
+        {
+            int companyId = int.Parse(company);
+            List<SettlementHistory> settlements = new List<SettlementHistory>();
+            string[] settlementFiles = Directory.GetFiles(company, "*.xlsx");           
+
+            foreach (var filename in settlementFiles)
+            {
+                SettlementHistory settlement = Parse(filename);
+                settlement.CompanyId = companyId;
+                settlements.Add(settlement);
+                System.Console.WriteLine($"Parsed: {filename} with {settlement.Credits.Count} credits.");            
+            }
+
+            return settlements;
+        }
+
+        public static string GetSettlementIdFromFile(string file)
+        {
+            string filename = Path.GetFileName(file);
+            int i = filename.IndexOf(".xls");
+            if (i <= 0)
+                throw new ApplicationException($"Unable to get SettlmentId from filename: {file}");
+
+            return filename.Substring(0, i);            
+        }
 
         public SettlementHistoryParser(string filename, string settlementId)
         {
@@ -164,33 +201,4 @@ namespace Trucks
             return null;
         }                
     }
-
-    // internal class Headers<T> where T : SettlementItem
-    // {
-    //     const int HEADER_ROW = 2; // 0 based index.
-
-    //     public Headers(Sheet sheet)
-    //     {
-
-    //     }
-
-    //     public PropertyInfo this[string column]
-    //     {
-    //         get { return GetPropertyByColumn(column); }
-    //     }
-
-    //     private static PropertyInfo GetPropertyByColumn(string column)
-    //     {
-    //         PropertyInfo[] props = typeof(Credit).GetProperties();
-    //         foreach (PropertyInfo prop in props)
-    //         {
-    //             SheetColumnAttribute attrib = prop.GetCustomAttribute(typeof(SheetColumnAttribute)) as SheetColumnAttribute;
-    //             if (attrib != null && attrib.Column == column)
-    //             {
-    //                 return prop;
-    //             }
-    //         }
-    //         return null;
-    //     }
-    // }    
 }

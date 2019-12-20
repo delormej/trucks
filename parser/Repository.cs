@@ -50,28 +50,44 @@ namespace Trucks
             return settlements;
         }
 
+        public void SaveSettlements(List<SettlementHistory> settlements, string company)
+        {
+            using (CosmosClient cosmosClient = GetCosmosClient())
+            {
+                int maxThroughPut = 10000;
+                var db = cosmosClient.GetDatabase(databaseId);
+                db.ReplaceThroughputAsync(maxThroughPut).Wait();
+                System.Console.WriteLine($"Set throughput to {maxThroughPut}.");
+
+                foreach (SettlementHistory settlement in settlements)
+                {
+                    try
+                    {
+                        // Run 1 settlement at a time.
+                        Task task = Task.Run(() => SaveSettlementHistoryAsync(cosmosClient, settlement));
+                        task.Wait();
+                        if (task.Exception != null)
+                            throw task.Exception;
+                        System.Console.WriteLine($"Saved settlement id: {settlement.SettlementId}.");
+                    }
+                    catch (Exception e)
+                    {
+                        System.Console.WriteLine(
+                            $"Error atempting to save settlement: {settlement.id} to database.\n\t{e.Message}");
+                    }
+                }
+                db.ReplaceThroughputAsync(400).Wait();
+                System.Console.WriteLine("Set throughput back to 400.");
+            }
+        }
+
         public async Task SaveSettlementHistoryAsync(SettlementHistory settlement)
         {
             try
             {
                 using (CosmosClient cosmosClient = GetCosmosClient())
                 {
-                    List<Task> inserts = new List<Task>();
-                    foreach (Credit credit in settlement.Credits)
-                    {
-                        inserts.Add(AddItemsToContainerAsync<Credit>(cosmosClient, credit, "Credit"));
-                    }
-                    foreach (Deduction deduction in settlement.Deductions)
-                    {
-                        inserts.Add(AddItemsToContainerAsync<Deduction>(cosmosClient, deduction, "Deduction"));
-                    }
-                    await Task.WhenAll(inserts);
-
-                    // Remove these for shallow insert.
-                    settlement.Credits = null;
-                    settlement.Deductions = null;
-
-                    await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");            
+                    await SaveSettlementHistoryAsync(cosmosClient, settlement);
                 }
             }
             catch (Exception e)
@@ -81,6 +97,25 @@ namespace Trucks
             }
         } 
 
+        private async Task SaveSettlementHistoryAsync(CosmosClient cosmosClient, SettlementHistory settlement)
+        {
+            List<Task> inserts = new List<Task>();
+            foreach (Credit credit in settlement.Credits)
+            {
+                inserts.Add(AddItemsToContainerAsync<Credit>(cosmosClient, credit, "Credit"));
+            }
+            foreach (Deduction deduction in settlement.Deductions)
+            {
+                inserts.Add(AddItemsToContainerAsync<Deduction>(cosmosClient, deduction, "Deduction"));
+            }
+            await Task.WhenAll(inserts);
+
+            // Remove these for shallow insert.
+            settlement.Credits = null;
+            settlement.Deductions = null;
+
+            await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");            
+        }
 
         /// <summary>
         /// Create the database if it does not exist
