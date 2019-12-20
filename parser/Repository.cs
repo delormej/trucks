@@ -54,7 +54,25 @@ namespace Trucks
         {
             try
             {
-                await InsertSettlementAsync(settlement);
+                using (CosmosClient cosmosClient = GetCosmosClient())
+                {
+                    List<Task> inserts = new List<Task>();
+                    foreach (Credit credit in settlement.Credits)
+                    {
+                        inserts.Add(AddItemsToContainerAsync<Credit>(cosmosClient, credit, "Credit"));
+                    }
+                    foreach (Deduction deduction in settlement.Deductions)
+                    {
+                        inserts.Add(AddItemsToContainerAsync<Deduction>(cosmosClient, deduction, "Deduction"));
+                    }
+                    await Task.WhenAll(inserts);
+
+                    // Remove these for shallow insert.
+                    settlement.Credits = null;
+                    settlement.Deductions = null;
+
+                    await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");            
+                }
             }
             catch (Exception e)
             {
@@ -109,37 +127,6 @@ namespace Trucks
                 System.Console.WriteLine($"Unable to save {valueText} in {containerId}, error:\n" + e.Message + "\n" + e.StackTrace);
             }
         }       
-
-        private async Task InsertSettlementAsync(SettlementHistory settlement)
-        {
-            //
-            // The challenge with this is that it's not a transaction and compensating
-            // logic will need to be written in the event of a FAILURE.
-            // Alternatively, we could write a JavaScript stored procedure which takes
-            // the fully hydrated deep Settlement object and does this on the server side
-            // encapsulating it in a transaction.
-            //
-
-            using (CosmosClient cosmosClient = GetCosmosClient())
-            {
-                List<Task> inserts = new List<Task>();
-                foreach (Credit credit in settlement.Credits)
-                {
-                    inserts.Add(AddItemsToContainerAsync<Credit>(cosmosClient, credit, "Credit"));
-                }
-                foreach (Deduction deduction in settlement.Deductions)
-                {
-                    inserts.Add(AddItemsToContainerAsync<Deduction>(cosmosClient, deduction, "Deduction"));
-                }
-                await Task.WhenAll(inserts);
-
-                // Remove these for shallow insert.
-                settlement.Credits = null;
-                settlement.Deductions = null;
-
-                await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");            
-            }
-        }
 
         private CosmosClient GetCosmosClient()
         {

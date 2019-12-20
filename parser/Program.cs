@@ -17,7 +17,10 @@ namespace Trucks
             // Repository repository = new Repository();
             // repository.EnsureDatabaseAsync().Wait();
 
-            ProcessUploaded(company, convertApiKey);
+            List<SettlementHistory> settlements = ReadLocalFiles(company);
+            SaveSettlements(settlements, company);
+
+            //ProcessUploaded(company, convertApiKey);
 
             // var task = ProcessAsync(company, password, convertApiKey);
             // task.Wait();
@@ -26,7 +29,8 @@ namespace Trucks
 
         private static async Task ProcessAsync(string company, string pantherPassword, string convertApiKey)
         {
-            List<SettlementHistory> settlements = await DownloadSettlementsAsync(company, pantherPassword); // ReadLocalFiles(company); // 
+            PantherClient panther = new PantherClient(company, pantherPassword);
+            List<SettlementHistory> settlements = await panther.DownloadSettlementsAsync(); 
             ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlements, convertApiKey);
             await orchestrator.StartAsync();
         }
@@ -58,13 +62,37 @@ namespace Trucks
                 string filename = result.target_files[0].name;
                 if (!File.Exists(filename))
                     filename = await Download(converter, result, company);
-                SettlementHistory settlement = Parse(filename);
-                settlement.CompanyId = int.Parse(company);
-                
-                // Store in cosmosdb
-                await repository.SaveSettlementHistoryAsync(settlement);
-                System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");            
+                SaveFileToDatabase(filename, company, repository);
             }
+        }
+
+        private static void SaveSettlements(List<SettlementHistory> settlements, string company)
+        {
+            Repository repository = new Repository();
+            foreach (SettlementHistory settlement in settlements)
+            {
+                try
+                {
+                    Task task = Task.Run(() => repository.SaveSettlementHistoryAsync(settlement));
+                    task.Wait();
+                    if (task.Exception != null)
+                        throw task.Exception;
+                    System.Console.WriteLine($"Saved settlement id: {settlement.SettlementId}, now waiting a second.");
+                    System.Threading.Thread.Sleep(100);
+                }
+                catch (Exception e)
+                {
+                    System.Console.WriteLine(
+                        $"Error atempting to save settlement: {settlement.id} to database.\n\t{e.Message}");
+                }
+            }
+        }
+
+        private static void SaveFileToDatabase(string filename, string company, Repository repository)
+        {
+            SettlementHistory settlement = Parse(filename, company);
+            repository.SaveSettlementHistoryAsync(settlement).Wait();
+            System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");                  
         }
 
         private static bool AlreadySaved(ZamzarResult result, List<SettlementHistory> settlements)
@@ -72,13 +100,6 @@ namespace Trucks
             string settlementId = GetSettlementIdFromFile(result.target_files[0].name);
             bool exists = (settlements.Where(s => s.SettlementId == settlementId).Count() > 0);
             return exists;
-        }
-
-        private static bool AlreadyDownloaded(SettlementHistory settlement)
-        {
-            string filename = Path.Combine(settlement.CompanyId.ToString(), 
-                settlement.SettlementId + ".xls");
-            return File.Exists(filename);
         }
 
         private static async Task<string> Download(ExcelConverter converter, ZamzarResult result, string company)
@@ -94,11 +115,13 @@ namespace Trucks
             return filename;
         }
 
-        private static SettlementHistory Parse(string filename)
+        private static SettlementHistory Parse(string filename, string company)
         {
             SettlementHistoryParser parser = new SettlementHistoryParser(
                 filename, GetSettlementIdFromFile(filename));
             SettlementHistory settlement = parser.Parse();
+            settlement.CompanyId = int.Parse(company);
+            settlement.SettlementId = GetSettlementIdFromFile(filename);            
             System.Console.WriteLine($"Parsed: {filename} with {settlement.Credits.Count} credits.");            
             
             return settlement;
@@ -107,15 +130,10 @@ namespace Trucks
         private static List<SettlementHistory> ReadLocalFiles(string company)
         {
             List<SettlementHistory> settlements = new List<SettlementHistory>();
-            string[] settlementFiles = Directory.GetFiles(company);
+            string[] settlementFiles = Directory.GetFiles(company, "*.xlsx");
 
-            foreach (var file in settlementFiles)
-            {
-                SettlementHistory settlement = new SettlementHistory();
-                settlement.CompanyId = int.Parse(company);
-                settlement.SettlementId = GetSettlementIdFromFile(file);
-                settlements.Add(settlement);
-            }
+            foreach (var filename in settlementFiles)
+                settlements.Add(Parse(filename, company));
 
             return settlements;
         }
@@ -128,33 +146,6 @@ namespace Trucks
                 throw new ApplicationException($"Unable to get SettlmentId from filename: {file}");
 
             return filename.Substring(0, i);            
-        }
-
-        private static async Task<List<SettlementHistory>> DownloadSettlementsAsync(string company, string password)
-        {
-            PantherClient client = new PantherClient();
-            
-            bool loggedIn = await client.LoginAsync(company, password);
-            if (!loggedIn)
-                throw new ApplicationException("Unable to login with credentials.");
-            
-            string payrollHistHtml = await client.GetPayrollHistAsync();
-            
-            PayrollHistHtmlParser parser = new PayrollHistHtmlParser(company);
-            List<SettlementHistory> settlements = parser.Parse(payrollHistHtml);
-            List<SettlementHistory> selectSettlements = 
-                settlements.Where(s => !AlreadyDownloaded(s))
-                    .OrderByDescending(s => s.SettlementDate)
-                    .Take(10)
-                    .ToList();
-
-            foreach (SettlementHistory settlement in selectSettlements)
-            {
-                string xls = await client.DownloadSettlementReportAsync(company, settlement.SettlementId);
-                System.Console.WriteLine($"Downloaded {settlement.SettlementId}: {xls}");
-            }
-            
-            return selectSettlements;
         }
 
         private static void CreateSettlementStatements(List<RevenueDetail> details)
