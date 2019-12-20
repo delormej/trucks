@@ -13,15 +13,22 @@ namespace Trucks
             string company = Environment.GetEnvironmentVariable("TRUCKCOMPANY") ?? (args.Length > 1 ? args[1] : "");
             string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD") ?? (args.Length > 1 ? args[2] : "");
             string convertApiKey = Environment.GetEnvironmentVariable("ZAMZARKEY") ?? (args.Length > 3 ? args[3] : "");
-                       
+
+            // Repository repository = new Repository();
+            // repository.EnsureDatabaseAsync().Wait();
+
             ProcessUploaded(company, convertApiKey);
-            return;
 
             // var task = ProcessAsync(company, password, convertApiKey);
             // task.Wait();
             // System.Console.WriteLine("Done");
-            // return;
-           
+        }
+
+        private static async Task ProcessAsync(string company, string pantherPassword, string convertApiKey)
+        {
+            List<SettlementHistory> settlements = await DownloadSettlementsAsync(company, pantherPassword); // ReadLocalFiles(company); // 
+            ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlements, convertApiKey);
+            await orchestrator.StartAsync();
         }
 
         // Processes files ready for download from conversion.
@@ -50,7 +57,7 @@ namespace Trucks
             {
                 string filename = result.target_files[0].name;
                 if (!File.Exists(filename))
-                    filename = await Download(converter, result);
+                    filename = await Download(converter, result, company);
                 SettlementHistory settlement = Parse(filename);
                 settlement.CompanyId = int.Parse(company);
                 
@@ -67,12 +74,19 @@ namespace Trucks
             return exists;
         }
 
-        private static async Task<string> Download(ExcelConverter converter, ZamzarResult result)
+        private static bool AlreadyDownloaded(SettlementHistory settlement)
+        {
+            string filename = Path.Combine(settlement.CompanyId.ToString(), 
+                settlement.SettlementId + ".xls");
+            return File.Exists(filename);
+        }
+
+        private static async Task<string> Download(ExcelConverter converter, ZamzarResult result, string company)
         {
             if (result.target_files.Length == 0)
                 throw new ApplicationException($"Unable to find a file for result: {result}");
             
-            string filename = result.target_files[0].name;
+            string filename = Path.Combine(company, result.target_files[0].name);
             int fileId = result.target_files[0].id;
             await converter.DownloadAsync(fileId, filename);
             System.Console.WriteLine($"Downloaded: {filename}");
@@ -88,13 +102,6 @@ namespace Trucks
             System.Console.WriteLine($"Parsed: {filename} with {settlement.Credits.Count} credits.");            
             
             return settlement;
-        }
-
-        private static async Task ProcessAsync(string company, string pantherPassword, string convertApiKey)
-        {
-            List<SettlementHistory> settlements = await DownloadSettlementsAsync(company, pantherPassword); // ReadLocalFiles(company); // 
-            ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlements, convertApiKey);
-            await orchestrator.StartAsync();
         }
 
         private static List<SettlementHistory> ReadLocalFiles(string company)
@@ -135,16 +142,19 @@ namespace Trucks
             
             PayrollHistHtmlParser parser = new PayrollHistHtmlParser(company);
             List<SettlementHistory> settlements = parser.Parse(payrollHistHtml);
-            IEnumerable<SettlementHistory> workingSettlements = 
-                settlements.OrderByDescending(s => s.SettlementDate).Take(10);
+            List<SettlementHistory> selectSettlements = 
+                settlements.Where(s => !AlreadyDownloaded(s))
+                    .OrderByDescending(s => s.SettlementDate)
+                    .Take(10)
+                    .ToList();
 
-            foreach (SettlementHistory settlement in workingSettlements)
+            foreach (SettlementHistory settlement in selectSettlements)
             {
                 string xls = await client.DownloadSettlementReportAsync(company, settlement.SettlementId);
                 System.Console.WriteLine($"Downloaded {settlement.SettlementId}: {xls}");
             }
             
-            return workingSettlements.ToList();
+            return selectSettlements;
         }
 
         private static void CreateSettlementStatements(List<RevenueDetail> details)
