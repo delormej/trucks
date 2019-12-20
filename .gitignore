@@ -5,3 +5,4 @@ obj
 packages
 .vscode
 .gitignore
+*.xls*
