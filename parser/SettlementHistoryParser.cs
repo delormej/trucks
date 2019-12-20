@@ -128,7 +128,7 @@ namespace Trucks
                 SettlementItem item,
                 SettlementHistoryWorkbook.HelperCell cell)
         {
-            if (property != null && !string.IsNullOrEmpty(cell.Value))
+            if (property != null && !string.IsNullOrWhiteSpace(cell.Value))
             {
                 if (property.PropertyType == typeof(int))
                 {
