@@ -38,17 +38,14 @@ namespace Trucks
             List<SettlementHistory> settlements = new List<SettlementHistory>();
             using (CosmosClient cosmosClient = GetCosmosClient())
             {
-                var sqlQueryText = "SELECT h.id FROM SettlementHistory h";
+                var sqlQueryText = "SELECT * FROM SettlementHistory h";
 
                 Container container = cosmosClient.GetContainer(databaseId, "SettlementHistory");
                 QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
                 
                 await foreach (SettlementHistory settlement in 
                     container.GetItemQueryIterator<SettlementHistory>(queryDefinition))
-                {
-                    settlements.Add(settlement);
-                    Console.WriteLine("\tRead {0}\n", settlement);
-                }
+                        settlements.Add(settlement);
             }
             return settlements;
         }
