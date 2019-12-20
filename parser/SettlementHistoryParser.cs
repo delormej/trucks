@@ -65,6 +65,7 @@ namespace Trucks
             if (sheet != null)
             {
                 Dictionary<string, PropertyInfo> columnProperties = GetColumnProperties<T>(sheet);
+                int rowIndex = 0;
 
                 foreach (SettlementHistoryWorkbook.HelperRow row in sheet.GetRows().Skip(2))
                 {
@@ -73,6 +74,8 @@ namespace Trucks
 
                     T item = new T();
                     item.SettlementId = _settlementId;
+                    item.id = $"{_settlementId}-{rowIndex++}";
+
                     foreach (SettlementHistoryWorkbook.HelperCell cell in row.GetCells())
                     {
                         if (columnProperties.ContainsKey(cell.Name))
