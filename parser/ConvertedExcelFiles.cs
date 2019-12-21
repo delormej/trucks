@@ -42,9 +42,6 @@ namespace Trucks
             Task.WaitAll(tasks.ToArray());
         }
 
-            //
-            // Internal helper methods to keep code more readable.
-            //
         private bool AlreadySaved(ZamzarResult result, List<SettlementHistory> settlements)
         {
             string settlementId = SettlementHistoryParser.GetSettlementIdFromFile(result.target_files[0].name);
@@ -57,7 +54,8 @@ namespace Trucks
             string filename = result.target_files[0].name;
             if (!File.Exists(filename))
                 filename = await DownloadFromConverter(converter, result, company);
-            SaveFileToDatabase(filename, company);
+            if (filename != null)
+                SaveFileToDatabase(filename, company);
         }
 
         private async Task<string> DownloadFromConverter(ExcelConverter converter, ZamzarResult result, string company)
@@ -67,10 +65,15 @@ namespace Trucks
             
             string filename = Path.Combine(company, result.target_files[0].name);
             int fileId = result.target_files[0].id;
-            await converter.DownloadAsync(fileId, filename);
-            System.Console.WriteLine($"Downloaded: {filename}");
-
-            return filename;
+            if (await converter.DownloadAsync(fileId, filename))
+            {
+                System.Console.WriteLine($"Downloaded: {filename}");
+                return filename;
+            }
+            else
+            {
+                return null;
+            }            
         }
 
         private void SaveFileToDatabase(string filename, string company)

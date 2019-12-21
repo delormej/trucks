@@ -66,14 +66,14 @@ namespace Trucks
             var task = Task.Run(async () => 
             {
                 PantherClient panther = new PantherClient(company, pantherPassword);
-                List<SettlementHistory> settlementsToConvert = await GetSettlementsToConver(panther);
+                List<SettlementHistory> settlementsToConvert = await GetSettlementsToConvert(panther);
                 ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlementsToConvert, convertApiKey);
                 await orchestrator.StartAsync();
             });
             task.Wait();
         }
 
-        private static async Task<List<SettlementHistory>> GetSettlementsToConver(PantherClient panther)
+        private static async Task<List<SettlementHistory>> GetSettlementsToConvert(PantherClient panther)
         {
             List<SettlementHistory> settlements = await panther.DownloadSettlementsAsync();
 

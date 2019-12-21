@@ -21,9 +21,6 @@ namespace Trucks
         {
             this.key = apiKey; 
         }   
-        // "977abf9c5a3497234a089dadf19e329a3160ae1d"
-        // var json = Upload(apiKey, endpoint, sourceFile, targetFormat).Result;
-        // Console.WriteLine(json);
         
         public async Task<ZamzarResult> UploadAsync(string sourceFile)
         {
@@ -84,7 +81,7 @@ namespace Trucks
             return successfulResults;
         }
 
-        public async Task DownloadAsync(int fileId, string outputFile)
+        public async Task<bool> DownloadAsync(int fileId, string outputFile)
         {
             string url = endpoint + "/v1/files/" + fileId.ToString() + "/content";
 
@@ -93,11 +90,41 @@ namespace Trucks
             using (HttpResponseMessage response = await client.GetAsync(url))
             using (HttpContent content = response.Content)
             using (Stream stream = await content.ReadAsStreamAsync())
-            using (FileStream writer = File.Create(outputFile))
             {
-                stream.CopyTo(writer);
+                if (response.StatusCode != HttpStatusCode.OK)
+                {
+                    string errors = GetErrors(stream);
+                    if (errors != null)
+                        System.Console.WriteLine($"Error downloading {outputFile}\n\t:{errors}");
+                    return false;
+                }
+                else
+                {
+                    using (FileStream writer = File.Create(outputFile))
+                    {
+                        stream.CopyTo(writer);
+                        return true;
+                    }
+                }
             }
-        }             
+        }
+
+        private string GetErrors(Stream stream)     
+        {
+            try
+            {
+                JsonDocument doc = JsonDocument.Parse(stream);
+                JsonElement errorsElement;
+                if (doc.RootElement.TryGetProperty("errors", out errorsElement))
+                    return errorsElement.GetRawText();
+                else
+                    return null;
+            }
+            catch (Exception e)
+            {
+                return e.Message;
+            }
+        }
     }
 
     public class ZamzarResult
