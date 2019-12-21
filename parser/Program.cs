@@ -66,11 +66,24 @@ namespace Trucks
             var task = Task.Run(async () => 
             {
                 PantherClient panther = new PantherClient(company, pantherPassword);
-                List<SettlementHistory> settlements = await panther.DownloadSettlementsAsync(); 
-                ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlements, convertApiKey);
+                List<SettlementHistory> settlementsToConvert = await GetSettlementsToConver(panther);
+                ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlementsToConvert, convertApiKey);
                 await orchestrator.StartAsync();
             });
             task.Wait();
+        }
+
+        private static async Task<List<SettlementHistory>> GetSettlementsToConver(PantherClient panther)
+        {
+            List<SettlementHistory> settlements = await panther.DownloadSettlementsAsync();
+
+            Repository repository = new Repository();
+            List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
+
+            // Don't try to convert settlements we've already persisted.
+            List<SettlementHistory> settlementsToConvert = settlements.Except(savedSettlements).ToList();            
+
+            return settlementsToConvert;
         }
 
         private static void CreateSettlementStatements(List<RevenueDetail> details)

@@ -35,26 +35,25 @@ namespace Trucks
             repository = new Repository();
         }
 
-        public async Task StartAsync()
+        public async Task StartAsync(int maxUploadCount = 20)
         {
-            const int maxUploadCount = 20;
             await UploadBatchAsync(maxUploadCount);
 
             // Wait until the queue is empty.
-            await Task.Run( () => {
-                while (pendingDownload.Count > 0);
-            });
+            // await Task.Run( () => {
+            //     while (pendingDownload.Count > 0);
+            // });
         }
 
-        private async Task UploadBatchAsync(int max)
+        private async Task UploadBatchAsync(int maxUploadCount = 20)
         {
             foreach (SettlementHistory settlement in queue)
             {
                 System.Console.WriteLine($"Uploading settlement: {settlement.SettlementId}");
                 var result = await converter.UploadAsync(GetLocalFilename(settlement));
                 
-                ScheduleJob(result.id, settlement);
-                pendingDownload.Add(result.id, settlement);
+                // ScheduleJob(result.id, settlement);
+                // pendingDownload.Add(result.id, settlement);
             }
         }
 
