@@ -10,19 +10,19 @@ namespace Trucks
     {
         static void Main(string[] args)
         {
-            ShowUsage();
+            ShowUsage(args);
 
             string company = Environment.GetEnvironmentVariable("TRUCKCOMPANY");
             string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD");
             string convertApiKey = Environment.GetEnvironmentVariable("ZAMZARKEY");
 
-            if (args.Length <= 1)
+            if (args.Length < 1)
             {
                 Process(company, password, convertApiKey);
             }
             else
             {
-                string command = args[1].ToLower();
+                string command = args[0].ToLower();
                 if (command == "uploaded")
                     ProcessUploaded(company, convertApiKey);
                 else if (command == "downloaded")
@@ -32,14 +32,26 @@ namespace Trucks
 
         private static void ProcessDownloaded(string company)
         {
+            System.Console.WriteLine("Processing local converted xlsx files.");
+
             List<SettlementHistory> settlements = SettlementHistoryParser.ParseLocalFiles(company);
-            Repository repository = new Repository();
-            repository.EnsureDatabaseAsync().Wait();
-            repository.SaveSettlements(settlements, company);            
+            if (settlements.Count > 0)
+            {
+                System.Console.WriteLine($"Found {settlements.Count} to process.");
+                Repository repository = new Repository();
+                // repository.EnsureDatabaseAsync().Wait();
+                repository.SaveSettlements(settlements, company);            
+            }
+            else
+            {
+                System.Console.WriteLine($"No settlements found for company {company}.");
+            }
         }
 
         private static void ProcessUploaded(string company, string convertApiKey)
         {
+            System.Console.WriteLine("Processing files already uploaded to converter.");
+
             ConvertedExcelFiles converted = new ConvertedExcelFiles(convertApiKey);
             converted.Process(company);
         }
@@ -49,6 +61,8 @@ namespace Trucks
         /// </summary>
         private static void Process(string company, string pantherPassword, string convertApiKey)
         {
+            System.Console.WriteLine("Running end to end process");
+
             var task = Task.Run(async () => 
             {
                 PantherClient panther = new PantherClient(company, pantherPassword);
@@ -88,9 +102,12 @@ namespace Trucks
             }           
         }
 
-        private static void ShowUsage()
+        private static void ShowUsage(string[] args)
         {
-            
+            for (int i = 0; i < args.Length; i++)
+            {
+                System.Console.WriteLine($"[{i}]: {args[i]}");
+            }
         }
     }
 }

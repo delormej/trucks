@@ -54,11 +54,7 @@ namespace Trucks
         {
             using (CosmosClient cosmosClient = GetCosmosClient())
             {
-                int maxThroughPut = 10000;
-                var db = cosmosClient.GetDatabase(databaseId);
-                db.ReplaceThroughputAsync(maxThroughPut).Wait();
-                System.Console.WriteLine($"Set throughput to {maxThroughPut}.");
-
+                SetThroughput(cosmosClient, 10000);
                 foreach (SettlementHistory settlement in settlements)
                 {
                     try
@@ -76,8 +72,7 @@ namespace Trucks
                             $"Error atempting to save settlement: {settlement.id} to database.\n\t{e.Message}");
                     }
                 }
-                db.ReplaceThroughputAsync(400).Wait();
-                System.Console.WriteLine("Set throughput back to 400.");
+                SetThroughput(cosmosClient, 400);
             }
         }
 
@@ -166,6 +161,21 @@ namespace Trucks
         private CosmosClient GetCosmosClient()
         {
             return new CosmosClient(endpointUrl, authorizationKey);
-        }        
+        }
+
+        private void SetThroughput(CosmosClient cosmosClient, int throughput)
+        {
+            Database db = cosmosClient.GetDatabase(databaseId);
+            var creditTask = SetContainerThroughputAsync(db, throughput, "Credit");
+            var deductionTask = SetContainerThroughputAsync(db, throughput, "Deduction");
+            Task.WaitAll(creditTask, deductionTask);
+            System.Console.WriteLine($"Set throughput to {throughput}.");
+        }
+
+        private async Task SetContainerThroughputAsync(Database db, int throughput, string containerName)
+        {
+            Container container = db.GetContainer(containerName);
+            await container.ReplaceThroughputAsync(throughput);
+        }
     }
 }
