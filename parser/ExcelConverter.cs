@@ -12,7 +12,7 @@ namespace Trucks
 {
     class ExcelConverter
     {
-        const string endpoint = "https://sandbox.zamzar.com";
+        const string endpoint = "https://api.zamzar.com";
         const string targetFormat = "xlsx";
         
         private readonly string key;
@@ -71,13 +71,21 @@ namespace Trucks
                 JsonDocument doc = JsonDocument.Parse(data);
                 if (doc != null)
                 {
-                    var jobs = doc.RootElement.GetProperty("data");
-                    results = JsonSerializer.Deserialize<List<ZamzarResult>>(jobs.GetRawText());
+                    JsonElement jobs;
+                    if (doc.RootElement.TryGetProperty("data", out jobs))
+                        results = JsonSerializer.Deserialize<List<ZamzarResult>>(jobs.GetRawText());
+                    else
+                    {
+                        System.Console.WriteLine("Unable to find 'data' in converted payload:\n\t" + 
+                            data);
+                    }
                 }
+                // TODO: handle pagination, are there more? (total_count > limit)
+                // "{\"paging\":{\"total_count\":36,\"limit\":50,\"first\":9167716,\"last\":8965001},
             }
             
             // Get only the succesful ones.
-            var successfulResults = results.Where(r => r.status == "successful");
+            var successfulResults = results?.Where(r => r.status == "successful");
             return successfulResults;
         }
 
