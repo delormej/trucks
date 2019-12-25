@@ -95,19 +95,23 @@ namespace Trucks
         private async Task SaveSettlementHistoryAsync(CosmosClient cosmosClient, SettlementHistory settlement)
         {
             List<Task> inserts = new List<Task>();
-            foreach (Credit credit in settlement.Credits)
+            if (settlement.Credits != null)
             {
-                inserts.Add(AddItemsToContainerAsync<Credit>(cosmosClient, credit, "Credit"));
+                foreach (Credit credit in settlement.Credits)
+                    inserts.Add(AddItemsToContainerAsync<Credit>(cosmosClient, credit, "Credit"));
             }
-            foreach (Deduction deduction in settlement.Deductions)
+            if (settlement.Deductions != null)
             {
-                inserts.Add(AddItemsToContainerAsync<Deduction>(cosmosClient, deduction, "Deduction"));
+                foreach (Deduction deduction in settlement.Deductions)
+                    inserts.Add(AddItemsToContainerAsync<Deduction>(cosmosClient, deduction, "Deduction"));
             }
-            await Task.WhenAll(inserts);
-
-            // Remove these for shallow insert.
-            settlement.Credits = null;
-            settlement.Deductions = null;
+            if (inserts.Count > 0)
+            {
+                await Task.WhenAll(inserts);
+                // Remove these for shallow insert.
+                settlement.Credits = null;
+                settlement.Deductions = null;
+            }
 
             await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");            
         }

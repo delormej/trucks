@@ -16,6 +16,14 @@ namespace Trucks
             string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD");
             string convertApiKey = Environment.GetEnvironmentVariable("ZAMZARKEY");
 
+            if (string.IsNullOrWhiteSpace(company) || 
+                string.IsNullOrWhiteSpace(password) || 
+                string.IsNullOrWhiteSpace(convertApiKey))
+            {
+                System.Console.WriteLine("Must set TRUCKCOMPANY, TRUCKPASSWORD, ZAMZARKEY env variables.");
+                return;
+            }
+
             if (args.Length < 1)
             {
                 Process(company, password, convertApiKey);
@@ -27,6 +35,8 @@ namespace Trucks
                     ProcessUploaded(company, convertApiKey);
                 else if (command == "downloaded")
                     ProcessDownloaded(company);
+                else if (command == "update")
+                    UpdateSettlementHeaders(company, password);
             }
         }
 
@@ -73,9 +83,29 @@ namespace Trucks
             task.Wait();
         }
 
+        private static void UpdateSettlementHeaders(string company, string pantherPassword)
+        {
+            System.Console.WriteLine($"Updating settlements for company: {company}.");
+
+            var task = Task.Run(async () => 
+            {
+                PantherClient panther = new PantherClient(company, pantherPassword);
+                List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
+
+                Repository repository = new Repository();
+                List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
+
+                List<SettlementHistory> settlementsToUpdate = 
+                    settlements.Intersect(savedSettlements, new SettlementHistoryComparer())
+                    .ToList();
+                repository.SaveSettlements(settlementsToUpdate, company);
+            });
+            task.Wait();           
+        }
+
         private static async Task<List<SettlementHistory>> GetSettlementsToConvert(PantherClient panther)
         {
-            List<SettlementHistory> settlements = await panther.DownloadSettlementsAsync();
+            List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
 
             Repository repository = new Repository();
             List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
