@@ -29,10 +29,22 @@ namespace Trucks
             client = new HttpClient(clientHandler);
         }
     
+        public async Task<List<SettlementHistory>> DownloadSettlementsAsync(DateTime settlementDate)
+        {
+            Func<SettlementHistory, bool> filter = (s => s.SettlementDate == settlementDate);
+            return await DownloadSettlementsAsync(filter);
+        }
+
         /// <summary>
         /// Downloads XLS (binary) settlement statements to local files in a directory for the specified company.
         /// </summary>
         public async Task<List<SettlementHistory>> DownloadSettlementsAsync(bool overwrite = false, int max = 10)
+        {
+            Func<SettlementHistory, bool> filter = (s => overwrite || !Exists(s));
+            return await DownloadSettlementsAsync(filter);            
+        }
+
+        public async Task<List<SettlementHistory>> DownloadSettlementsAsync(Func<SettlementHistory, bool> filter, int max = 10)
         {
             bool loggedIn = await LoginAsync();
             if (!loggedIn)
@@ -42,11 +54,10 @@ namespace Trucks
             
             PayrollHistHtmlParser parser = new PayrollHistHtmlParser(company);
             List<SettlementHistory> settlements = parser.Parse(payrollHistHtml);
-            List<SettlementHistory> selectSettlements = 
-                settlements.Where(s => overwrite || !Exists(s))
-                    .OrderByDescending(s => s.SettlementDate)
-                    .Take(max)
-                    .ToList();
+            List<SettlementHistory> selectSettlements = settlements.Where(filter)
+                .OrderByDescending(s => s.SettlementDate)
+                .Take(max)
+                .ToList();
 
             foreach (SettlementHistory settlement in selectSettlements)
             {
