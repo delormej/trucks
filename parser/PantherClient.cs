@@ -46,14 +46,7 @@ namespace Trucks
 
         public async Task<List<SettlementHistory>> DownloadSettlementsAsync(Func<SettlementHistory, bool> filter, int max = 10)
         {
-            bool loggedIn = await LoginAsync();
-            if (!loggedIn)
-                throw new ApplicationException("Unable to login with credentials.");
-            
-            string payrollHistHtml = await GetPayrollHistAsync();
-            
-            PayrollHistHtmlParser parser = new PayrollHistHtmlParser(company);
-            List<SettlementHistory> settlements = parser.Parse(payrollHistHtml);
+            List<SettlementHistory> settlements = await GetSettlementsAsync();
             List<SettlementHistory> selectSettlements = settlements.Where(filter)
                 .OrderByDescending(s => s.SettlementDate)
                 .Take(max)
@@ -66,6 +59,20 @@ namespace Trucks
             }
             
             return selectSettlements;
+        }
+
+        public async Task<List<SettlementHistory>> GetSettlementsAsync()
+        {
+            bool loggedIn = await LoginAsync();
+            if (!loggedIn)
+                throw new ApplicationException("Unable to login with credentials.");
+            
+            string payrollHistHtml = await GetPayrollHistAsync();
+            
+            PayrollHistHtmlParser parser = new PayrollHistHtmlParser(company);
+            List<SettlementHistory> settlements = parser.Parse(payrollHistHtml);
+            
+            return settlements;            
         }
 
         /// <summary>
