@@ -181,5 +181,57 @@ namespace Trucks
             Container container = db.GetContainer(containerName);
             await container.ReplaceThroughputAsync(throughput);
         }
+
+        public async Task ConsolidateSettlementsAsync()
+        {
+            using (CosmosClient cosmosClient = GetCosmosClient())
+            {
+                List<SettlementHistory> settlements = 
+                    await GetSettlementItemsAsync<SettlementHistory>(cosmosClient);
+                
+                foreach (var settlement in settlements)
+                {
+                    settlement.Credits = 
+                        await GetSettlementItemsAsync<Credit>(cosmosClient, settlement.SettlementId);
+                    settlement.Deductions = 
+                        await GetSettlementItemsAsync<Deduction>(cosmosClient, settlement.SettlementId);
+                    
+                    if (settlement.Credits?.Count > 0 && settlement.Deductions?.Count > 0)
+                    {
+                        await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");
+                        
+                        System.Console.WriteLine($"Updated settlement {settlement.SettlementId} with {settlement.Credits?.Count()} credits and {settlement.Deductions?.Count()} deducations.");
+                    }
+                }
+            }
+        }
+
+        private async Task<List<T>> GetSettlementItemsAsync<T>(CosmosClient cosmosClient, string settlementId = null) where T : SettlementItem
+        {
+            string itemName = typeof(T).Name;
+
+            try 
+            {
+                List<T> items = new List<T>();    
+                string sqlQueryText = $"SELECT * FROM {itemName} c";
+                if (settlementId != null) 
+                    sqlQueryText += $" WHERE c.SettlementId = '{settlementId}'";
+
+                Container container = cosmosClient.GetContainer(databaseId, itemName);
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
+                
+                await foreach (T item in 
+                    container.GetItemQueryIterator<T>(queryDefinition))
+                        items.Add(item);
+
+                return items;
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine($"Error occurred while retrieving {itemName} with {settlementId}:\n\t" +
+                    e.Message);
+                return null;
+            }
+        }
     }
 }

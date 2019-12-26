@@ -37,6 +37,10 @@ namespace Trucks
                     ProcessDownloaded(company);
                 else if (command == "update")
                     UpdateSettlementHeaders(company, password);
+                else if (command == "consolidate")
+                    ConsolidateSettlements();
+                else if (command == "report")
+                    GetReport();
             }
         }
 
@@ -143,6 +147,29 @@ namespace Trucks
                 
                 //Console.WriteLine(value);
             }           
+        }
+
+        private static void ConsolidateSettlements()
+        {
+            System.Console.WriteLine("Consolidating settlements.");
+            var task = Task.Run( async () => 
+            {
+                Repository repository = new Repository();
+                await repository.ConsolidateSettlementsAsync();
+            });
+            task.Wait();
+        }
+
+        private static void GetReport()
+        {
+            System.Console.WriteLine("Generating report.");
+            var task = Task.Run( async () => 
+            {
+                Repository repository = new Repository();
+                RevenueReport report = new RevenueReport(repository);
+                await report.GetTruckRevenueGroupBySettlementAsync();
+            });
+            task.Wait();            
         }
 
         private static void ShowUsage(string[] args)

@@ -3,14 +3,12 @@ using System.Collections.Generic;
 
 namespace Trucks
 {
-    public class SettlementHistory
+    public class SettlementHistory : SettlementItem
     {
         public SettlementHistory() {}
 
         // Required for cosmosdb
-        public string id => SettlementId;
-        
-        public string SettlementId { get; set; } 
+        public override string id => SettlementId;
         
         public DateTime SettlementDate { get; set; }
         // all trucks: 33357, 44510 
