@@ -191,16 +191,21 @@ namespace Trucks
                 
                 foreach (var settlement in settlements)
                 {
-                    settlement.Credits = 
-                        await GetSettlementItemsAsync<Credit>(cosmosClient, settlement.SettlementId);
-                    settlement.Deductions = 
-                        await GetSettlementItemsAsync<Deduction>(cosmosClient, settlement.SettlementId);
+                    // settlement.Credits = 
+                    //     await GetSettlementItemsAsync<Credit>(cosmosClient, settlement.SettlementId);
+                    // settlement.Deductions = 
+                    //     await GetSettlementItemsAsync<Deduction>(cosmosClient, settlement.SettlementId);
                     
                     if (settlement.Credits?.Count > 0 && settlement.Deductions?.Count > 0)
                     {
-                        await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");
+                        //await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");
                         
-                        System.Console.WriteLine($"Updated settlement {settlement.SettlementId} with {settlement.Credits?.Count()} credits and {settlement.Deductions?.Count()} deducations.");
+                        //System.Console.WriteLine($"Updated settlement {settlement.SettlementId} with {settlement.Credits?.Count()} credits and {settlement.Deductions?.Count()} deducations.");
+                    }
+                    else
+                    {
+                        // Remove settlements that do not have credits or deductions.
+                        await DeleteSettlementAsync(cosmosClient, settlement);
                     }
                 }
             }
@@ -232,6 +237,14 @@ namespace Trucks
                     e.Message);
                 return null;
             }
+        }
+
+        private async Task DeleteSettlementAsync(CosmosClient cosmosClient, SettlementHistory settlement)
+        {
+            Container container = cosmosClient.GetContainer(databaseId, typeof(SettlementHistory).Name);
+            PartitionKey partitionKey = new PartitionKey(settlement.CompanyId);
+            await container.DeleteItemAsync<SettlementHistory>(settlement.SettlementId, partitionKey);
+            System.Console.WriteLine($"Deleted: {settlement.SettlementId}");
         }
     }
 }
