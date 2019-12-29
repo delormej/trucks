@@ -21,41 +21,56 @@ namespace Trucks
         /// Downloads converted files from converter site, processes them as SettlementHistory
         /// and persists them to the database.
         /// <summary>
-        public void Process(string company)
+        public void Process(PantherClient pantherClient)
         {            
             Repository repository = new Repository();
 
-            // Kick these two off async.
             var getConverterResults = converter.QueryAllAsync();
             var getSavedSettlements = repository.GetSettlementsAsync();
-            Task.WaitAll(getConverterResults, getSavedSettlements);
+            var getSettlementHeaders = pantherClient.GetSettlementsAsync();
+            Task.WaitAll(getConverterResults, getSavedSettlements, getSettlementHeaders);
 
             IEnumerable<ZamzarResult> results = getConverterResults.Result;
             List<SettlementHistory> savedSettlements = getSavedSettlements.Result;
+            List<SettlementHistory> settlementHeaders = getSettlementHeaders.Result;
 
             List<Task> tasks = new List<Task>();
             foreach (ZamzarResult result in results)
             {
                 if (!AlreadySaved(result, savedSettlements))
-                    tasks.Add(ProcessResultAsync(result, company));
+                {
+                    string settlementId = GetSettlementId(result);
+                    SettlementHistory settlement = settlementHeaders.Where(s => s.SettlementId == settlementId).FirstOrDefault();
+                    if (settlement != null)
+                        tasks.Add(ProcessResultAsync(result, settlement));
+                    else
+                        System.Console.WriteLine($"SettlementId {settlementId} not found.");
+                }
             }
             Task.WaitAll(tasks.ToArray());
         }
 
         private bool AlreadySaved(ZamzarResult result, List<SettlementHistory> settlements)
         {
-            string settlementId = SettlementHistoryParser.GetSettlementIdFromFile(result.target_files[0].name);
+            string settlementId = GetSettlementId(result);
             bool exists = (settlements.Where(s => s.SettlementId == settlementId).Count() > 0);
             return exists;
         }            
 
-        private async Task ProcessResultAsync(ZamzarResult result, string company)
+        private string GetSettlementId(ZamzarResult result)
+        {
+            return SettlementHistoryParser.GetSettlementIdFromFile(
+                result.target_files[0].name);
+        }
+
+        private async Task ProcessResultAsync(ZamzarResult result, SettlementHistory settlement)
         {
             string filename = result.target_files[0].name;
             if (!File.Exists(filename))
-                filename = await DownloadFromConverter(converter, result, company);
+                filename = await DownloadFromConverter(converter, result, 
+                    settlement.CompanyId.ToString());
             if (filename != null)
-                SaveFileToDatabase(filename, company);
+                SaveFileToDatabase(filename, settlement);
         }
 
         private async Task<string> DownloadFromConverter(ExcelConverter converter, ZamzarResult result, string company)
@@ -76,10 +91,12 @@ namespace Trucks
             }            
         }
 
-        private void SaveFileToDatabase(string filename, string company)
+        private void SaveFileToDatabase(string filename, SettlementHistory settlement)
         {
-            SettlementHistory settlement = SettlementHistoryParser.Parse(filename);
-            settlement.CompanyId = int.Parse(company);
+            SettlementHistory parsedSettlement = SettlementHistoryParser.Parse(filename);
+            settlement.Credits = parsedSettlement.Credits;
+            settlement.Deductions = parsedSettlement.Deductions;
+
             repository.SaveSettlementHistoryAsync(settlement).Wait();
             System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");                  
         }

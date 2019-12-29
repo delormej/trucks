@@ -32,7 +32,7 @@ namespace Trucks
             {
                 string command = args[0].ToLower();
                 if (command == "uploaded")
-                    ProcessUploaded(company, convertApiKey);
+                    ProcessUploaded(company, password, convertApiKey);
                 else if (command == "downloaded")
                     ProcessDownloaded(company);
                 else if (command == "update")
@@ -62,12 +62,12 @@ namespace Trucks
             }
         }
 
-        private static void ProcessUploaded(string company, string convertApiKey)
+        private static void ProcessUploaded(string company, string pantherPassword, string convertApiKey)
         {
             System.Console.WriteLine("Processing files already uploaded to converter.");
-
+            PantherClient panther = new PantherClient(company, pantherPassword);
             ConvertedExcelFiles converted = new ConvertedExcelFiles(convertApiKey);
-            converted.Process(company);
+            converted.Process(panther);
         }
 
         /// <summary>
