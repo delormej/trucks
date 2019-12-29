@@ -52,14 +52,20 @@ namespace Trucks
                 .Take(max)
                 .ToList();
 
-            foreach (SettlementHistory settlement in selectSettlements)
+            return await DownloadSettlementsAsync(selectSettlements);
+
+        }
+
+        public async Task<List<SettlementHistory>> DownloadSettlementsAsync(List<SettlementHistory> settlementsToDownload)
+        {
+            foreach (SettlementHistory settlement in settlementsToDownload)
             {
                 string xls = await DownloadSettlementReportAsync(settlement.SettlementId);
                 System.Console.WriteLine($"Downloaded {settlement.SettlementId}: {xls}");
             }
             
-            return selectSettlements;
-        }
+            return settlementsToDownload;            
+        }        
 
         public async Task<List<SettlementHistory>> GetSettlementsAsync()
         {

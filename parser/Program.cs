@@ -73,7 +73,7 @@ namespace Trucks
         /// <summary>
         /// End-to-end task, downloads settlements from panther, converts, parses and persists to database.
         /// </summary>
-        private static void Process(string company, string pantherPassword, string convertApiKey)
+        private static void Process(string company, string pantherPassword, string convertApiKey, int max = 10)
         {
             System.Console.WriteLine("Running end to end process");
 
@@ -82,7 +82,7 @@ namespace Trucks
                 PantherClient panther = new PantherClient(company, pantherPassword);
                 List<SettlementHistory> settlementsToConvert = await GetSettlementsToConvert(panther);
                 ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlementsToConvert, convertApiKey);
-                await orchestrator.StartAsync();
+                await orchestrator.StartAsync(max);
             });
             task.Wait();
         }
@@ -107,7 +107,7 @@ namespace Trucks
             task.Wait();           
         }
 
-        private static async Task<List<SettlementHistory>> GetSettlementsToConvert(PantherClient panther)
+        private static async Task<List<SettlementHistory>> GetSettlementsToConvert(PantherClient panther, int max = 10)
         {
             List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
 
@@ -115,7 +115,13 @@ namespace Trucks
             List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
 
             // Don't try to convert settlements we've already persisted.
-            List<SettlementHistory> settlementsToConvert = settlements.Except(savedSettlements).ToList();            
+            List<SettlementHistory> settlementsToDownload = settlements.Except(savedSettlements)
+                .OrderByDescending(s => s.SettlementDate)
+                .Take(max)
+                .ToList();
+                
+            List<SettlementHistory> settlementsToConvert = 
+                await panther.DownloadSettlementsAsync(settlementsToDownload);
 
             return settlementsToConvert;
         }
