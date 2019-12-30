@@ -182,6 +182,7 @@ namespace Trucks
                     else
                     {
                         // Remove settlements that do not have credits or deductions.
+                        System.Console.WriteLine($"{settlement.SettlementId} has no credits/deductions.");
                         await DeleteSettlementAsync(cosmosClient, settlement);
                     }
                 }

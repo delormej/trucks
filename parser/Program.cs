@@ -34,7 +34,7 @@ namespace Trucks
                 if (command == "uploaded")
                     ProcessUploaded(company, password, convertApiKey);
                 else if (command == "downloaded")
-                    ProcessDownloaded(company);
+                    ProcessDownloaded(company, password, convertApiKey);
                 else if (command == "update")
                     UpdateSettlementHeaders(company, password);
                 else if (command == "consolidate")
@@ -44,21 +44,53 @@ namespace Trucks
             }
         }
 
-        private static void ProcessDownloaded(string company)
+        private static void ProcessDownloaded(string company, string pantherPassword, string convertApiKey)
         {
             System.Console.WriteLine("Processing local converted xlsx files.");
 
-            List<SettlementHistory> settlements = SettlementHistoryParser.ParseLocalFiles(company);
-            if (settlements.Count > 0)
+            List<SettlementHistory> settlementHeaders = null; 
+            Task.Run( async () => {
+                PantherClient panther = new PantherClient(company, pantherPassword);
+                settlementHeaders = await panther.GetSettlementsAsync();
+            }).Wait();
+            
+            List<SettlementHistory> downloadedSettlements = SettlementHistoryParser.ParseLocalFiles(company);
+            if (downloadedSettlements.Count > 0)
             {
-                System.Console.WriteLine($"Found {settlements.Count} to process.");
+                System.Console.WriteLine($"Found {downloadedSettlements.Count} to process.");
+                List<SettlementHistory> mergedSettlements = 
+                    MergeSettlements(settlementHeaders, downloadedSettlements).ToList();
+
                 Repository repository = new Repository();
                 // repository.EnsureDatabaseAsync().Wait();
-                repository.SaveSettlements(settlements);            
+                repository.SaveSettlements(mergedSettlements);            
             }
             else
             {
                 System.Console.WriteLine($"No settlements found for company {company}.");
+            }
+        }
+
+        private static IEnumerable<SettlementHistory> MergeSettlements(
+                List<SettlementHistory> settlementHeaders, 
+                List<SettlementHistory> downloadedSettlements)
+        {
+            foreach (var downloadedSettlement in downloadedSettlements)
+            {
+                var match = settlementHeaders.Where(s => 
+                    s.SettlementId == downloadedSettlement.SettlementId)
+                    .FirstOrDefault();
+
+                if (match != null)
+                {
+                    match.Credits = downloadedSettlement.Credits;
+                    match.Deductions = downloadedSettlement.Deductions;
+                    yield return match;
+                }
+                else
+                {
+                    System.Console.WriteLine($"No match while merging settlement {downloadedSettlement.SettlementId}");
+                }
             }
         }
 
