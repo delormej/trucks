@@ -54,7 +54,7 @@ namespace Trucks
                 System.Console.WriteLine($"Found {settlements.Count} to process.");
                 Repository repository = new Repository();
                 // repository.EnsureDatabaseAsync().Wait();
-                repository.SaveSettlements(settlements, company);            
+                repository.SaveSettlements(settlements);            
             }
             else
             {
@@ -102,7 +102,7 @@ namespace Trucks
                 List<SettlementHistory> settlementsToUpdate = 
                     settlements.Intersect(savedSettlements, new SettlementHistoryComparer())
                     .ToList();
-                repository.SaveSettlements(settlementsToUpdate, company);
+                repository.SaveSettlements(settlementsToUpdate);
             });
             task.Wait();           
         }

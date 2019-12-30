@@ -50,7 +50,7 @@ namespace Trucks
             return settlements;
         }
 
-        public void SaveSettlements(List<SettlementHistory> settlements, string company)
+        public void SaveSettlements(List<SettlementHistory> settlements)
         {
             using (CosmosClient cosmosClient = GetCosmosClient())
             {
@@ -60,7 +60,7 @@ namespace Trucks
                     try
                     {
                         // Run 1 settlement at a time.
-                        Task task = Task.Run(() => SaveSettlementHistoryAsync(cosmosClient, settlement));
+                        Task task = Task.Run(() => AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement));
                         task.Wait();
                         if (task.Exception != null)
                             throw task.Exception;
@@ -82,7 +82,7 @@ namespace Trucks
             {
                 using (CosmosClient cosmosClient = GetCosmosClient())
                 {
-                    await SaveSettlementHistoryAsync(cosmosClient, settlement);
+                    await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement);
                 }
             }
             catch (Exception e)
@@ -91,30 +91,6 @@ namespace Trucks
                 throw e;
             }
         } 
-
-        private async Task SaveSettlementHistoryAsync(CosmosClient cosmosClient, SettlementHistory settlement)
-        {
-            List<Task> inserts = new List<Task>();
-            if (settlement.Credits != null)
-            {
-                foreach (Credit credit in settlement.Credits)
-                    inserts.Add(AddItemsToContainerAsync<Credit>(cosmosClient, credit, "Credit"));
-            }
-            if (settlement.Deductions != null)
-            {
-                foreach (Deduction deduction in settlement.Deductions)
-                    inserts.Add(AddItemsToContainerAsync<Deduction>(cosmosClient, deduction, "Deduction"));
-            }
-            if (inserts.Count > 0)
-            {
-                await Task.WhenAll(inserts);
-                // Remove these for shallow insert.
-                settlement.Credits = null;
-                settlement.Deductions = null;
-            }
-
-            await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");            
-        }
 
         /// <summary>
         /// Create the database if it does not exist
@@ -148,8 +124,10 @@ namespace Trucks
         /// <summary>
         /// Add Family items to the container
         /// </summary>
-        private async Task AddItemsToContainerAsync<T>(CosmosClient cosmosClient, T value, string containerId)
+        private async Task AddItemsToContainerAsync<T>(CosmosClient cosmosClient, T value)
         {
+            string containerId = typeof(T).Name;
+
             try
             {
                 Container container = cosmosClient.GetContainer(databaseId, containerId);
@@ -170,9 +148,8 @@ namespace Trucks
         private void SetThroughput(CosmosClient cosmosClient, int throughput)
         {
             Database db = cosmosClient.GetDatabase(databaseId);
-            var creditTask = SetContainerThroughputAsync(db, throughput, "Credit");
-            var deductionTask = SetContainerThroughputAsync(db, throughput, "Deduction");
-            Task.WaitAll(creditTask, deductionTask);
+            var throughputTask = SetContainerThroughputAsync(db, throughput, "SettlementHistory");
+            throughputTask.Wait();
             System.Console.WriteLine($"Set throughput to {throughput}.");
         }
 
