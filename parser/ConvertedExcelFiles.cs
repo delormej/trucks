@@ -37,30 +37,35 @@ namespace Trucks
             List<Task> tasks = new List<Task>();
             foreach (ZamzarResult result in results)
             {
-                if (!AlreadySaved(result, savedSettlements))
+                string settlementId = GetSettlementId(result);
+                SettlementHistory savedSettlement = GetBySettlementId(savedSettlements, settlementId);
+                
+                if (savedSettlement != null)
                 {
-                    string settlementId = GetSettlementId(result);
-                    SettlementHistory settlement = settlementHeaders.Where(s => s.SettlementId == settlementId).FirstOrDefault();
-                    if (settlement != null)
-                        tasks.Add(ProcessResultAsync(result, settlement));
+                    SettlementHistory settlementHeader = GetBySettlementId(settlementHeaders, settlementId);                    
+                    if (settlementHeader != null)
+                        tasks.Add(ProcessResultAsync(result, settlementHeader));
                     else
-                        System.Console.WriteLine($"SettlementId {settlementId} not found.");
+                        System.Console.WriteLine($"SettlementId {settlementId} not found on panther.");
+                }
+                else
+                {
+                    System.Console.WriteLine($"SettlementId {settlementId} not found in database.");
                 }
             }
             Task.WaitAll(tasks.ToArray());
-        }
-
-        private bool AlreadySaved(ZamzarResult result, List<SettlementHistory> settlements)
-        {
-            string settlementId = GetSettlementId(result);
-            bool exists = (settlements.Where(s => s.SettlementId == settlementId).Count() > 0);
-            return exists;
-        }            
+        }   
 
         private string GetSettlementId(ZamzarResult result)
         {
             return SettlementHistoryParser.GetSettlementIdFromFile(
                 result.target_files[0].name);
+        }
+
+        private SettlementHistory GetBySettlementId(IEnumerable<SettlementHistory> settlements, string settlementId)
+        {
+            return settlements.Where(s => 
+                s.SettlementId == settlementId).FirstOrDefault();            
         }
 
         private async Task ProcessResultAsync(ZamzarResult result, SettlementHistory settlement)
