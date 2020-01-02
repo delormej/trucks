@@ -117,6 +117,20 @@ namespace Trucks
             }
         }
 
+        public async Task<bool> DeleteAsync(int fileId)
+        {
+            string url = endpoint + "/v1/files/" + fileId.ToString();
+            using (HttpClientHandler handler = new HttpClientHandler { Credentials = new NetworkCredential(key, "")})
+            using (HttpClient client = new HttpClient(handler))
+            using (HttpResponseMessage response = await client.DeleteAsync(url))
+            using (HttpContent content = response.Content)
+            {
+                string data = await content.ReadAsStringAsync();
+                System.Console.WriteLine($"Deleted file:\n{GetDeletedFile(data)}");
+                return true;
+            }            
+        }
+
         private string GetErrors(Stream stream)     
         {
             try
@@ -132,6 +146,26 @@ namespace Trucks
             {
                 return e.Message;
             }
+        }
+
+        private string GetDeletedFile(string json)
+        {
+            string fileName = string.Empty;
+            try
+            {
+                JsonDocument doc = JsonDocument.Parse(json);
+                JsonElement nameElement;
+                if (doc.RootElement.TryGetProperty("name", out nameElement))
+                {
+                    fileName = nameElement.GetRawText();
+                }
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine($"Error getting deleted file name from json: {json}\n\t{e.Message}");
+            }
+
+            return fileName;
         }
     }
 

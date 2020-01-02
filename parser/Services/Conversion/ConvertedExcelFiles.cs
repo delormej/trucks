@@ -64,7 +64,10 @@ namespace Trucks
                 filename = await DownloadFromConverter(converter, result, 
                     settlement.CompanyId.ToString());
             if (filename != null)
+            {
                 SaveFileToDatabase(filename, settlement);
+                await converter.DeleteAsync(result.target_files[0].id);
+            }
         }
 
         private async Task<string> DownloadFromConverter(ExcelConverter converter, ZamzarResult result, string company)
@@ -88,11 +91,18 @@ namespace Trucks
         private void SaveFileToDatabase(string filename, SettlementHistory settlement)
         {
             SettlementHistory parsedSettlement = SettlementHistoryParser.Parse(filename);
-            settlement.Credits = parsedSettlement.Credits;
-            settlement.Deductions = parsedSettlement.Deductions;
+            if (parsedSettlement != null)
+            {
+                settlement.Credits = parsedSettlement.Credits;
+                settlement.Deductions = parsedSettlement.Deductions;
 
-            repository.SaveSettlementHistoryAsync(settlement).Wait();
-            System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");                  
+                repository.SaveSettlementHistoryAsync(settlement).Wait();
+                System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");                  
+            }
+            else
+            {
+                System.Console.WriteLine($"Unable to parse {filename}.");
+            }
         }
     }
 }

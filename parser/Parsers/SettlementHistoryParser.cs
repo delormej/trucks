@@ -55,14 +55,22 @@ namespace Trucks
 
         public SettlementHistory Parse()
         {
-            SettlementHistoryWorkbook workbook = new SettlementHistoryWorkbook(_filename);
-            
-            SettlementHistory settlement = new SettlementHistory();
-            settlement.SettlementId = this._settlementId;          
-            settlement.Credits = GetCredits(workbook);
-            settlement.Deductions = GetDeductions(workbook);
-            settlement.SettlementDate = GetLastCreditDate(settlement);
-            return settlement;
+            try
+            {
+                SettlementHistoryWorkbook workbook = new SettlementHistoryWorkbook(_filename);
+                
+                SettlementHistory settlement = new SettlementHistory();
+                settlement.SettlementId = this._settlementId;          
+                settlement.Credits = GetCredits(workbook);
+                settlement.Deductions = GetDeductions(workbook);
+                settlement.SettlementDate = GetLastCreditDate(settlement);
+                return settlement;
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine($"Error parsing {_filename}: {_settlementId}.  Error:\n\t{e.Message}");
+                return null;
+            }
         }
 
         private List<Credit> GetCredits(SettlementHistoryWorkbook workbook)
@@ -168,21 +176,29 @@ namespace Trucks
                 SettlementItem item,
                 SettlementHistoryWorkbook.HelperCell cell)
         {
-            if (property != null && !string.IsNullOrWhiteSpace(cell.Value))
+            try 
             {
-                if (property.PropertyType == typeof(int))
+                if (property != null && !string.IsNullOrWhiteSpace(cell.Value))
                 {
-                    property.SetValue(item, int.Parse(cell.Value));
+                    if (property.PropertyType == typeof(int))
+                    {
+                        property.SetValue(item, int.Parse(cell.Value));
+                    }
+                    else if (property.PropertyType == typeof(double))
+                    {
+                        property.SetValue(item, double.Parse(cell.Value));
+                    }
+                    else
+                    {
+                        property.SetValue(item, cell.Value);
+                    }
                 }
-                else if (property.PropertyType == typeof(double))
-                {
-                    property.SetValue(item, double.Parse(cell.Value));
-                }
-                else
-                {
-                    property.SetValue(item, cell.Value);
-                }
-            }            
+            }    
+            catch (Exception e)        
+            {
+                System.Console.WriteLine($"Unable to set value {item} on {property.Name} for {cell.Value}\n\t{e.Message}");
+                throw e;
+            }
         }    
 
         private PropertyInfo GetPropertyByHeader<T>(string header)

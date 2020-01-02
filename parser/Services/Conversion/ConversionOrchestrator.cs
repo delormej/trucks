@@ -96,9 +96,13 @@ namespace Trucks
                 pendingDownload.Remove(job.JobId);
                 SettlementHistoryParser parser = new SettlementHistoryParser(convertedFile, job.Item.SettlementId);
                 SettlementHistory settlement = parser.Parse();
-                Task.Run( async () => {
-                    await repository.SaveSettlementHistoryAsync(settlement);
-                });
+                
+                if (settlement != null)
+                {
+                    Task.Run( async () => {
+                        await repository.SaveSettlementHistoryAsync(settlement);
+                    });
+                }
             }
             else
             {
