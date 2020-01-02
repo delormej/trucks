@@ -26,7 +26,7 @@ namespace Trucks
 
             if (args.Length < 1)
             {
-                Process(company, password, convertApiKey);
+                DownloadAndConvert(company, password, convertApiKey);
             }
             else
             {
@@ -105,18 +105,26 @@ namespace Trucks
         }
 
         /// <summary>
-        /// End-to-end task, downloads settlements from panther, converts, parses and persists to database.
+        /// Downloads settlements from panther, converts, parses and persists to database.
         /// </summary>
-        private static void Process(string company, string pantherPassword, string convertApiKey, int max = 10)
+        private static void DownloadAndConvert(string company, string pantherPassword, string convertApiKey, int max = 10)
         {
-            System.Console.WriteLine("Running end to end process");
+            System.Console.WriteLine("Downloading settlements from panther and uploading to conversion service.");
 
             var task = Task.Run(async () => 
             {
                 PantherClient panther = new PantherClient(company, pantherPassword);
                 List<SettlementHistory> settlementsToConvert = await GetSettlementsToConvert(panther);
-                ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlementsToConvert, convertApiKey);
-                await orchestrator.StartAsync(max);
+                if (settlementsToConvert != null)
+                {
+                    ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlementsToConvert, convertApiKey);
+                    await orchestrator.StartAsync(max);
+                }
+                else
+                {
+                    System.Console.WriteLine($"No settlements found to convert for {company}.");
+                }
+                
             });
             task.Wait();
         }
@@ -162,11 +170,11 @@ namespace Trucks
             List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
 
             // Don't try to convert settlements we've already persisted.
-            List<SettlementHistory> settlementsToDownload = settlements.Except(savedSettlements)
+            List<SettlementHistory> settlementsToDownload = settlements.Except(savedSettlements, new SettlementHistoryComparer())
                 .OrderByDescending(s => s.SettlementDate)
                 .Take(max)
                 .ToList();
-                
+
             List<SettlementHistory> settlementsToConvert = 
                 await panther.DownloadSettlementsAsync(settlementsToDownload);
 
