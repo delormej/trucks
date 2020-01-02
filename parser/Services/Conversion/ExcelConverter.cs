@@ -126,7 +126,7 @@ namespace Trucks
             using (HttpContent content = response.Content)
             {
                 string data = await content.ReadAsStringAsync();
-                System.Console.WriteLine($"Deleted file:\n{GetDeletedFile(data)}");
+                System.Console.WriteLine($"Deleted file {GetDeletedFile(data)}");
                 return true;
             }            
         }
