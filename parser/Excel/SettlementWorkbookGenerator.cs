@@ -12,11 +12,13 @@ namespace Trucks
         {
         }
 
-        public async Task<SettlementWorkbook> GenerateAsync(int year, int[] weeks, int truck)
+        public async Task<string> GenerateAsync(int year, int[] weeks, int truck)
         {       
             Repository repository = new Repository();    
             List<SettlementHistory> settlements = await repository.GetSettlementsByWeekAsync(year, weeks);
-            
+            SettlementWorkbook workbook = new SettlementWorkbook("SettlementHistoryTemplate.xlsx");
+            string driver = null;
+
             foreach (int week in weeks)
             {
                 List<Credit> credits = new List<Credit>();
@@ -28,20 +30,32 @@ namespace Trucks
                     deductions.AddRange(s.Deductions.Where(d => d.TruckId == truck));
                 }
 
-                foreach(var c in credits)
-                    System.Console.WriteLine($"{c.TruckId}, {c.Driver}, {c.TotalPaid}");
-
-                foreach(var d in deductions)
-                    System.Console.WriteLine($"{d.TruckId}, {d.Driver}, {d.TotalDeductions}");                    
-
+                if (driver == null)
+                    driver = GetDriver(credits);
+                workbook.AddSheet(week, truck, driver);
+                workbook.AddCredits(credits);
+                workbook.AddDeductions(deductions);
             }
+            
+            string outputFile = GetFilename(year, driver);
+            workbook.Save(outputFile);
 
-            // System.Console.WriteLine($"Found {settlements.Count()} settlements");
-
-
-
-            return null;
+            return outputFile;
         }
 
+        private string GetDriver(IEnumerable<Credit> credits)
+        {
+            // TODO: Driver can be different for each line... how do we reconcile this??
+
+            string driver = credits.Where(c => c.CreditDescriptions == "FUEL SURCHARGE CREDIT")
+                .Select(c => c.Driver).First();
+            return driver;
+        }
+
+        private string GetFilename(int year, string driver)
+        {
+            string format = $"{year} ({driver}) Settlement.xlsx";
+            return format;
+        }
     }
 }

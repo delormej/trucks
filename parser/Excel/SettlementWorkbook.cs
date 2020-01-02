@@ -9,11 +9,24 @@ namespace Trucks
         private const int lastLoadRow = 6;
         private Dictionary<string, string> columns;
 
-        public SettlementWorkbook()
+        public SettlementWorkbook(string templateFile)
         {
             columns = GetSheetColumns();
+            this.Open(templateFile);
         }
         
+        public void AddSheet(int week, int truck, string driver)
+        {}
+
+        public void AddCredits(IEnumerable<Credit> credits)
+        {}
+
+        public void AddDeductions(IEnumerable<Deduction> deductions)
+        {}
+
+        public void Save(string filename)
+        {}
+
         private void AddLoadRow(Credit credit)
         {
             if (lastLoadRow >= MaxRows)
@@ -26,7 +39,7 @@ namespace Trucks
 
         private void SetDriver(string driver)
         {
-
+            
         }
 
         private void SetTruck(int truckId)
