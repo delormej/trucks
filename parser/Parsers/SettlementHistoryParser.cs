@@ -197,7 +197,6 @@ namespace Trucks
             catch (Exception e)        
             {
                 System.Console.WriteLine($"Unable to set value {item} on {property.Name} for {cell.Value}\n\t{e.Message}");
-                throw e;
             }
         }    
 

@@ -65,8 +65,8 @@ namespace Trucks
                     settlement.CompanyId.ToString());
             if (filename != null)
             {
-                SaveFileToDatabase(filename, settlement);
-                await converter.DeleteAsync(result.target_files[0].id);
+                if (SaveFileToDatabase(filename, settlement))
+                    await converter.DeleteAsync(result.target_files[0].id);
             }
         }
 
@@ -88,7 +88,7 @@ namespace Trucks
             }            
         }
 
-        private void SaveFileToDatabase(string filename, SettlementHistory settlement)
+        private bool SaveFileToDatabase(string filename, SettlementHistory settlement)
         {
             SettlementHistory parsedSettlement = SettlementHistoryParser.Parse(filename);
             if (parsedSettlement != null)
@@ -97,11 +97,13 @@ namespace Trucks
                 settlement.Deductions = parsedSettlement.Deductions;
 
                 repository.SaveSettlementHistoryAsync(settlement).Wait();
-                System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");                  
+                System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");   
+                return true;               
             }
             else
             {
                 System.Console.WriteLine($"Unable to parse {filename}.");
+                return false;
             }
         }
     }
