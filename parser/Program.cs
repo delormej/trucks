@@ -37,6 +37,8 @@ namespace Trucks
                     ProcessDownloaded(company, password, convertApiKey);
                 else if (command == "update")
                     UpdateSettlementHeaders(company, password);
+                else if (command == "updateall")
+                    UpdateAllSettlements();                    
                 else if (command == "consolidate")
                     ConsolidateSettlements();
                 else if (command == "report")
@@ -137,6 +139,19 @@ namespace Trucks
                 repository.SaveSettlements(settlementsToUpdate);
             });
             task.Wait();           
+        }
+
+        private static void UpdateAllSettlements()
+        {
+            System.Console.WriteLine($"Updating all settlements.");
+
+            var task = Task.Run(async () => 
+            {
+                Repository repository = new Repository();
+                List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
+                repository.SaveSettlements(savedSettlements);
+            });
+            task.Wait();                       
         }
 
         private static async Task<List<SettlementHistory>> GetSettlementsToConvert(PantherClient panther, int max = 10)

@@ -5,14 +5,23 @@ namespace Trucks
 {
     public class SettlementHistory : SettlementItem
     {
+        private DateTime settlementDate;
         public SettlementHistory() {}
 
         // Required for cosmosdb
         public override string id => SettlementId;
-        
-        public DateTime SettlementDate { get; set; }
-        // all trucks: 33357, 44510 
-        // 49809 only trucks: 33451, 33438, 33446, 33425, 33426 
+        public DateTime SettlementDate 
+        { 
+            get { return this.settlementDate; } 
+            set 
+            {
+                this.settlementDate = value;
+                this.WeekNumber = Tools.GetWeekNumber(settlementDate);
+                this.Year = settlementDate.Year;
+            }
+        }
+        public int WeekNumber { get; set; }
+        public int Year { get; set; }
         public int CompanyId { get; set; } 
         public double CheckAmount { get; set; }
         public double ARAmount { get; set; }
