@@ -51,21 +51,27 @@ namespace Trucks
             System.Console.WriteLine("Processing local converted xlsx files.");
 
             List<SettlementHistory> settlementHeaders = null; 
-            Task.Run( async () => {
+            List<SettlementHistory> downloadedSettlements = null;
+            var getSettlementHeaders = Task.Run( async () => {
                 PantherClient panther = new PantherClient(company, pantherPassword);
                 settlementHeaders = await panther.GetSettlementsAsync();
-            }).Wait();
-            
-            List<SettlementHistory> downloadedSettlements = SettlementHistoryParser.ParseLocalFiles(company);
+            });
+            var parseLocalFiles = Task.Run( () =>
+                downloadedSettlements = SettlementHistoryParser.ParseLocalFiles(company));
+            Task.WaitAll(getSettlementHeaders, parseLocalFiles);
+
             if (downloadedSettlements.Count > 0)
             {
                 System.Console.WriteLine($"Found {downloadedSettlements.Count} to process.");
                 List<SettlementHistory> mergedSettlements = 
                     MergeSettlements(settlementHeaders, downloadedSettlements).ToList();
+                System.Console.WriteLine($"Merged {mergedSettlements.Count}.");
 
-                Repository repository = new Repository();
-                // repository.EnsureDatabaseAsync().Wait();
-                repository.SaveSettlements(mergedSettlements);            
+                if (mergedSettlements.Count > 0)
+                {
+                    Repository repository = new Repository();
+                    repository.SaveSettlements(mergedSettlements);            
+                }
             }
             else
             {
