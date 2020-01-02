@@ -188,7 +188,11 @@ namespace Trucks
                 {
                     if (property.PropertyType == typeof(int))
                     {
-                        property.SetValue(item, int.Parse(cell.Value));
+                        int value = 0;
+                        if (int.TryParse(cell.Value, out value))
+                            property.SetValue(item, value);
+                        else
+                            System.Console.WriteLine($"WARNING: Unable to set value {item} on {property.Name} for {cell.Value}");
                     }
                     else if (property.PropertyType == typeof(double))
                     {
