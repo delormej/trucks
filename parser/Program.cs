@@ -158,33 +158,8 @@ namespace Trucks
             return settlementsToConvert;
         }
 
-        private static void CreateSettlementStatements(List<RevenueDetail> details)
+        private static void CreateSettlementStatement(DateTime settlementDate, int truckid)
         {
-            // select by truck
-            var truckLoads = 
-                from load in details
-                group load by load.Truck into g 
-                orderby g.Key
-                select g;
-
-            foreach (IGrouping<string, RevenueDetail> g in truckLoads)
-            {
-                Console.WriteLine("Group: " + g.Key);
-                foreach (var load in g)
-                {
-                    Console.WriteLine("\t{0}, {1}", load.Truck, load.Date);
-                }
-            }
-
-            using (ExcelWorkbook workbook = new ExcelWorkbook())
-            {
-                workbook.Open("Settlement.xlsx");
-                //string value = workbook.GetCellValue("Week_27", "B1");
-                workbook.UpdateCellValue("Week_27", "B1", "Johnny Cheekie");
-                workbook.UpdateCellValue("Week_27", "C15", "100.91");
-                
-                //Console.WriteLine(value);
-            }           
         }
 
         private static void ConsolidateSettlements()

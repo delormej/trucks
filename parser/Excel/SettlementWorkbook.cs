@@ -5,36 +5,36 @@ namespace Trucks
 {
     public class SettlementWorkbook : ExcelWorkbook
     {
-        private int lastLoadRow;
+        private const int MaxRows = 26;
+        private const int lastLoadRow = 6;
         private Dictionary<string, string> columns;
 
         public SettlementWorkbook()
         {
-            lastLoadRow = 6; // first row for data.
             columns = GetSheetColumns();
         }
         
-        public void AddLoadRow(RevenueDetail detail)
+        private void AddLoadRow(Credit credit)
         {
-            if (lastLoadRow >= 26)
-                throw new ApplicationException("Error, cannot exceed 20 loads per settlement week.");
+            if (lastLoadRow >= MaxRows)
+                throw new ApplicationException($"Error, cannot exceed {MaxRows} loads per settlement week.");
             
-            string sheetName = GetSheetname(detail.Week);
-            UpdateCellValue(sheetName, GetAddressname("Load"), detail.Load);
-            UpdateCellValue(sheetName, GetAddressname("Miles"), detail.Miles.ToString());
+            // string sheetName = GetSheetname(detail.Week);
+            // UpdateCellValue(sheetName, GetAddressname("Load"), detail.Load);
+            // UpdateCellValue(sheetName, GetAddressname("Miles"), detail.Miles.ToString());
         }
 
-        public void SetDriver(Driver driver)
+        private void SetDriver(string driver)
         {
 
         }
 
-        public void SetTruck(string truck)
+        private void SetTruck(int truckId)
         {
 
         }
 
-        public void SetSettlementDate(DateTime date)
+        private void SetSettlementDate(DateTime date)
         {
 
         }
