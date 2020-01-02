@@ -37,8 +37,10 @@ namespace Trucks
         public async Task GetTruckRevenueGroupBySettlementAsync()
         {
             List<SettlementHistory> settlements = await repository.GetSettlementsAsync();
-            IEnumerable<SettlementHistory> orderedSettlements = settlements.OrderByDescending(s => s.Year)
-                .OrderByDescending(s => s.WeekNumber);
+            IEnumerable<SettlementHistory> orderedSettlements = settlements
+                .OrderByDescending(s => s.WeekNumber)
+                .OrderByDescending(s => s.Year);
+                
             List<TruckReport> reports = new List<TruckReport>();           
             System.Console.WriteLine(TruckReport.Header);
 
