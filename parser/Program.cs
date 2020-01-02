@@ -43,6 +43,13 @@ namespace Trucks
                     ConsolidateSettlements();
                 else if (command == "report")
                     GetReport();
+                else if (command == "settlement")
+                {
+                    int year = int.Parse(args[1]);
+                    int week = int.Parse(args[2]);
+                    int truck = int.Parse(args[3]);
+                    CreateSettlementStatement(year, week, truck);
+                }
             }
         }
 
@@ -187,8 +194,16 @@ namespace Trucks
             return settlementsToConvert;
         }
 
-        private static void CreateSettlementStatement(DateTime settlementDate, int truckid)
+        private static void CreateSettlementStatement(int year, int week, int truckid)
         {
+            System.Console.WriteLine($"Creating settlement for truck {truckid} week# {year}:{week}.");
+           
+            Task.Run( async () => 
+            {
+                SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator();
+                await generator.GenerateAsync(year, new int[] { week }, truckid);
+            }
+            ).Wait();
         }
 
         private static void ConsolidateSettlements()

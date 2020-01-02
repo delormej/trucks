@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Trucks
 {
-    class Repository
+    public class Repository
     {
         private const string endpointUrl = "https://trucksdb.documents.azure.com:443/";
         private string authorizationKey = Environment.GetEnvironmentVariable("TRUCKDBKEY");
@@ -48,6 +48,36 @@ namespace Trucks
                         settlements.Add(settlement);
             }
             return settlements;
+        }
+
+        public async Task<List<SettlementHistory>> GetSettlementsByWeekAsync(int year, int[] weeks)
+        {
+            string weekNumbers = string.Join(',', weeks);
+
+            using (CosmosClient cosmosClient = GetCosmosClient())
+            {
+                try 
+                {
+                    List<SettlementHistory> items = new List<SettlementHistory>();    
+                    string sqlQueryText = $"SELECT * FROM SettlementHistory c";
+                    sqlQueryText += $" WHERE c.Year = {year} AND c.WeekNumber IN ({weekNumbers})";
+
+                    Container container = cosmosClient.GetContainer(databaseId, "SettlementHistory");
+                    QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
+                    
+                    await foreach (SettlementHistory item in 
+                        container.GetItemQueryIterator<SettlementHistory>(queryDefinition))
+                            items.Add(item);
+
+                    return items;
+                }
+                catch (Exception e)
+                {
+                    System.Console.WriteLine($"Error occurred while retrieving SettlementHistory for weeks: {weekNumbers}:\n\t" +
+                        e.Message);
+                    return null;
+                }
+            }
         }
 
         public void SaveSettlements(List<SettlementHistory> settlements)
