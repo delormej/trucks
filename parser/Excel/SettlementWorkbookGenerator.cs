@@ -8,14 +8,15 @@ namespace Trucks
 {
     public class SettlementWorkbookGenerator
     {
-        public SettlementWorkbookGenerator()
+        private List<SettlementHistory> _settlements;
+
+        public SettlementWorkbookGenerator(List<SettlementHistory> settlements)
         {
+            this._settlements = settlements;
         }
 
-        public async Task<string> GenerateAsync(int year, int[] weeks, int truck)
-        {       
-            Repository repository = new Repository();    
-            List<SettlementHistory> settlements = await repository.GetSettlementsByWeekAsync(year, weeks);
+        public string Generate(int year, int[] weeks, int truck)
+        {
             SettlementWorkbook workbook = new SettlementWorkbook("SettlementHistoryTemplate.xlsx");
             string driver = null;
 
@@ -24,7 +25,7 @@ namespace Trucks
                 List<Credit> credits = new List<Credit>();
                 List<Deduction> deductions = new List<Deduction>();
 
-                foreach (SettlementHistory s in settlements.Where(s => s.WeekNumber == week))
+                foreach (SettlementHistory s in _settlements.Where(s => s.WeekNumber == week))
                 {
                     credits.AddRange(s.Credits.Where(c => c.TruckId == truck));
                     deductions.AddRange(s.Deductions.Where(d => d.TruckId == truck));

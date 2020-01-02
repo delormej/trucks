@@ -200,8 +200,13 @@ namespace Trucks
            
             Task.Run( async () => 
             {
-                SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator();
-                await generator.GenerateAsync(year, new int[] { week }, truckid);
+                int[] weeks = new int[] { week };
+                
+                Repository repository = new Repository();    
+                List<SettlementHistory> settlements = await repository.GetSettlementsByWeekAsync(year, weeks);
+                SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements);
+                //foreach (int truckId in truckIds)
+                string file = generator.Generate(year, weeks, truckid);
             }
             ).Wait();
         }
