@@ -28,6 +28,12 @@ namespace Trucks
 
             foreach (var filename in settlementFiles)
             {
+                if (filename.Contains("~$"))
+                {
+                    System.Console.WriteLine($"Skipping temp file {filename}.");
+                    continue;
+                }
+
                 SettlementHistory settlement = Parse(filename);
                 settlement.CompanyId = companyId;
                 settlements.Add(settlement);
