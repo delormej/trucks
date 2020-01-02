@@ -26,32 +26,21 @@ namespace Trucks
             Repository repository = new Repository();
 
             var getConverterResults = converter.QueryAllAsync();
-            var getSavedSettlements = repository.GetSettlementsAsync();
             var getSettlementHeaders = pantherClient.GetSettlementsAsync();
-            Task.WaitAll(getConverterResults, getSavedSettlements, getSettlementHeaders);
+            Task.WaitAll(getConverterResults, getSettlementHeaders);
 
             IEnumerable<ZamzarResult> results = getConverterResults.Result;
-            List<SettlementHistory> savedSettlements = getSavedSettlements.Result;
             List<SettlementHistory> settlementHeaders = getSettlementHeaders.Result;
 
             List<Task> tasks = new List<Task>();
             foreach (ZamzarResult result in results)
             {
                 string settlementId = GetSettlementId(result);
-                SettlementHistory savedSettlement = GetBySettlementId(savedSettlements, settlementId);
-                
-                if (savedSettlement != null)
-                {
-                    SettlementHistory settlementHeader = GetBySettlementId(settlementHeaders, settlementId);                    
-                    if (settlementHeader != null)
-                        tasks.Add(ProcessResultAsync(result, settlementHeader));
-                    else
-                        System.Console.WriteLine($"SettlementId {settlementId} not found on panther.");
-                }
+                SettlementHistory settlementHeader = GetBySettlementId(settlementHeaders, settlementId);                    
+                if (settlementHeader != null)
+                    tasks.Add(ProcessResultAsync(result, settlementHeader));
                 else
-                {
-                    System.Console.WriteLine($"SettlementId {settlementId} not found in database.");
-                }
+                    System.Console.WriteLine($"SettlementId {settlementId} not found on panther.");
             }
             Task.WaitAll(tasks.ToArray());
         }   
