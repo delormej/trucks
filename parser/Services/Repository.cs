@@ -28,8 +28,7 @@ namespace Trucks
             {
                 await CreateDatabaseAsync();
                 await CreateContainerAsync("SettlementHistory", "/CompanyId");
-                await CreateContainerAsync("Credit", "/SettlementId");
-                await CreateContainerAsync("Deduction", "/SettlementId");            
+                await CreateContainerAsync("FuelCharge", "/TruckId");
             }
         }
 
