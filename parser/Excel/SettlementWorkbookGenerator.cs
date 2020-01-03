@@ -9,10 +9,13 @@ namespace Trucks
     public class SettlementWorkbookGenerator
     {
         private List<SettlementHistory> _settlements;
+        private FuelChargeRepository _fuelRepository;
 
-        public SettlementWorkbookGenerator(List<SettlementHistory> settlements)
+        public SettlementWorkbookGenerator(List<SettlementHistory> settlements, 
+                FuelChargeRepository fuelRepository = null)
         {
             this._settlements = settlements;
+            this._fuelRepository = fuelRepository;
         }
 
         public string Generate(int year, int[] weeks, int truck)
@@ -24,12 +27,13 @@ namespace Trucks
             {
                 foreach (int week in weeks)
                 {
-                    List<Credit> credits = new List<Credit>();
-                    List<Deduction> deductions = new List<Deduction>();
                     DateTime settlementDate = _settlements.Where(
                         s => s.WeekNumber == week 
                         && s.Credits.Where(c => c.TruckId == truck).Count() > 0
                     ).First().SettlementDate;
+
+                    List<Credit> credits = new List<Credit>();
+                    List<Deduction> deductions = new List<Deduction>();
 
                     foreach (SettlementHistory s in _settlements.Where(s => s.WeekNumber == week))
                     {
@@ -50,8 +54,24 @@ namespace Trucks
 
                     if (workbook != null)
                     {
-                        workbook.AddSheet(week, credits, deductions);
-                        // workbook.DeleteSheet("Week_");
+                        workbook.AddSheet(week);
+                        workbook.AddCredits(credits);
+                        if (_fuelRepository != null)
+                        {
+                            double fuel = _fuelRepository.GetFuelCharges(week, truck);
+                            workbook.AddFuelCharge(fuel);
+                            
+                            // Filter deductions
+                            var deductionsToRemove = deductions.Where(d => 
+                                d.Description == "COMCHEK PRO ADVANCE");
+                            deductions = deductions.Except(deductionsToRemove).ToList();
+                        }
+                        
+                        var occupationalInsurance = deductions.Where(d => 
+                            d.Description == "OCCUPATIONAL INSURANCE").FirstOrDefault();
+                        if (occupationalInsurance != null)
+                            workbook.AddOccupationalInsurance(occupationalInsurance.Amount);
+
                         workbook.Save();
                     }
                 }
@@ -76,5 +96,18 @@ namespace Trucks
                 .Select(c => c.Driver).FirstOrDefault();
             return driver;
         }
+
+        // Externalize business logic into a predicate?
+        // public Func<SettlementHistory, bool> DeductionPredicate { get; set; }
+
+            // if company is 44510 and truck is NOT Andrew Rowan, then don't include 
+            // COMCHEK PRO ADVANCE
+
+            // if (s.CompanyId == 44510)
+            // {
+            //     s.Deductions.Where(d => d.TruckId != 13357);
+            // }
+
+            // ADVANCE FEE PLAN F gets added if ??
     }
 }

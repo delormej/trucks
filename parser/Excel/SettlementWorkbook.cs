@@ -31,7 +31,7 @@ namespace Trucks
             return _outputFilename;                    
         }
 
-        public void AddSheet(int week, IEnumerable<Credit> credits, IEnumerable<Deduction> deductions)
+        public void AddSheet(int week)
         {
             _sheetName = GetSheetname(week);
              _lastLoadRow = 5;
@@ -39,7 +39,6 @@ namespace Trucks
             SetTruck();
             SetDriver();    
             SetSettlementDate();
-            AddCredits(credits);
         }
 
         public void Save()
@@ -53,7 +52,7 @@ namespace Trucks
             return format;
         }
 
-        private void AddCredits(IEnumerable<Credit> credits)
+        public void AddCredits(IEnumerable<Credit> credits)
         {
             foreach (var c in credits)
             {
@@ -79,8 +78,33 @@ namespace Trucks
             }
         }
 
-        private void AddDeductions(IEnumerable<Deduction> deductions)
-        {}
+        /// <summary>
+        /// Places the fuel amount in the first available row under Advances.
+        /// </summary>
+        public void AddFuelCharge(double fuel)
+        {
+            if (fuel == default(double))
+                return;
+
+            int row = 6;
+
+            while (!string.IsNullOrWhiteSpace(GetCellValue(_sheetName, FuelCell())))
+                if (row++ > MaxRows)
+                    throw new ApplicationException("No available rows to put fuel charge.");
+
+            UpdateCellValue(FuelCell(), fuel);
+
+            string FuelCell()
+            {
+                return $"F{row}";
+            }
+        }
+
+        public void AddOccupationalInsurance(double value)
+        {
+            const string cell = "C32";
+            UpdateCellValue(_sheetName, cell, value.ToString());
+        }
 
         private void SetDriver()
         {

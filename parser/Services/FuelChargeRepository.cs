@@ -17,10 +17,15 @@ namespace Trucks
             Load(filename);
         }
 
-        public IEnumerable<FuelCharge> GetFuelCharges(int week, int truckId)
+        public double GetFuelCharges(int week, int truckId)
         {
+            double fuel = 0.0;
             string truck = truckId.ToString();
-            return GetFuelCharges(week).Where(f => f.TruckId == truck);
+            IEnumerable<FuelCharge> charges = GetFuelCharges(week).Where(f => f.TruckId == truck);
+            if (charges?.Count() > 0)
+                fuel = charges.Sum(c => c.NetCost);
+            
+            return fuel;
         }
 
         public IEnumerable<FuelCharge> GetFuelCharges(int week)

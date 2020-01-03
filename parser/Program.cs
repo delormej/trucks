@@ -49,7 +49,12 @@ namespace Trucks
                     int week = int.Parse(args[2]);
                     int truck;
                     if (args.Length > 3 && int.TryParse(args[3], out truck))
-                        CreateSettlementStatement(year, week, truck);
+                    {
+                        if (args.Length > 4)
+                            CreateSettlementStatement(year, week, truck, args[4]);
+                        else
+                            CreateSettlementStatement(year, week, truck);
+                    }
                     else
                         CreateSettlementStatement(year, week);
                 }
@@ -197,7 +202,8 @@ namespace Trucks
             return settlementsToConvert;
         }
 
-        private static void CreateSettlementStatement(int year, int week, int? truckid = null)
+        private static void CreateSettlementStatement(int year, int week, 
+                int? truckid = null, string fuelCsv = null)
         {
             System.Console.WriteLine($"Creating settlements.");
            
@@ -205,11 +211,15 @@ namespace Trucks
             {
                 int[] weeks = new int[] { week };
                 
+                FuelChargeRepository fuelRepository = null;
+                if (fuelCsv != null)
+                    fuelRepository = new FuelChargeRepository(fuelCsv);
+
                 Repository repository = new Repository();    
                 List<SettlementHistory> settlements = await repository.GetSettlementsByWeekAsync(year, weeks);
                 if (settlements.Count() > 0)
                 {
-                    SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements);
+                    SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements, fuelRepository);
                     int[] trucks = (truckid == null) ? GetTrucks(settlements) : new int[] { (int)truckid };
                     foreach (int truck in trucks)
                     {
