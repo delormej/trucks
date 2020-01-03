@@ -35,6 +35,7 @@ namespace Trucks
         {
             _sheetName = GetSheetname(week);
             this.CopySheet("Week_", _sheetName);
+             _lastLoadRow = 5;
 
             SetTruck();
             SetDriver();    

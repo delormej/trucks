@@ -204,9 +204,16 @@ namespace Trucks
                 
                 Repository repository = new Repository();    
                 List<SettlementHistory> settlements = await repository.GetSettlementsByWeekAsync(year, weeks);
-                SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements);
-                //foreach (int truckId in truckIds)
-                string file = generator.Generate(year, weeks, truckid);
+                if (settlements.Count() > 0)
+                {
+                    SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements);
+                    //foreach (int truckId in truckIds)
+                    string file = generator.Generate(year, weeks, truckid);
+                }
+                else
+                {
+                    System.Console.WriteLine($"No settlements found for the specified {year} and {string.Join(",", weeks)}");
+                }
             }
             ).Wait();
         }
