@@ -61,7 +61,8 @@ namespace Trucks
                 if (++_lastLoadRow >= MaxRows)
                     throw new ApplicationException($"Error, cannot exceed {MaxRows} loads per settlement week.");
 
-                UpdateCellValue("Load", c.ProNumber.Substring(c.ProNumber.Length - 5));
+                if (c.ProNumber !=null && c.ProNumber.Length > 6)
+                    UpdateCellValue("Load", c.ProNumber.Substring(c.ProNumber.Length - 5));
                 UpdateCellValue("Miles", c.Miles);
                 UpdateCellValue("Rev", c.ExtendedAmount);
                 UpdateCellValue("FSC", c.CreditAmount);
@@ -153,18 +154,5 @@ namespace Trucks
         {
             Dispose();
         }
-
-        public override void Dispose()
-        {
-            try 
-            {
-                if (document != null)
-                {
-                    document.Close();
-                    document.Dispose();
-                }
-            }
-            catch{/*ignore any errors here*/}
-        }        
     }
 }

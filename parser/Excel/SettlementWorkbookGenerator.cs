@@ -39,8 +39,16 @@ namespace Trucks
 
                     if (workbook == null)
                     {
-                        workbook = new SettlementWorkbook(year, truck, GetDriver(credits), settlementDate);
-                        outputFile = workbook.Create();
+                        string driver = GetDriver(credits);
+                        if (driver != null)
+                        {
+                            workbook = new SettlementWorkbook(year, truck, driver, settlementDate);
+                            outputFile = workbook.Create();
+                        }
+                        else
+                        {
+                            System.Console.WriteLine($"No driver found for {week}");
+                        }
                     }
                         
                     workbook.AddSheet(week, credits, deductions);
@@ -64,7 +72,6 @@ namespace Trucks
         private string GetDriver(IEnumerable<Credit> credits)
         {
             // TODO: Driver can be different for each line... how do we reconcile this??
-
             string driver = credits.Where(c => c.CreditDescriptions == "FUEL SURCHARGE CREDIT")
                 .Select(c => c.Driver).First();
             return driver;

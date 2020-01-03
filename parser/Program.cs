@@ -47,8 +47,11 @@ namespace Trucks
                 {
                     int year = int.Parse(args[1]);
                     int week = int.Parse(args[2]);
-                    int truck = int.Parse(args[3]);
-                    CreateSettlementStatement(year, week, truck);
+                    int truck;
+                    if (args.Length > 3 && int.TryParse(args[3], out truck))
+                        CreateSettlementStatement(year, week, truck);
+                    else
+                        CreateSettlementStatement(year, week);
                 }
             }
         }
@@ -194,9 +197,9 @@ namespace Trucks
             return settlementsToConvert;
         }
 
-        private static void CreateSettlementStatement(int year, int week, int truckid)
+        private static void CreateSettlementStatement(int year, int week, int? truckid = null)
         {
-            System.Console.WriteLine($"Creating settlement for truck {truckid} week# {year}:{week}.");
+            System.Console.WriteLine($"Creating settlements.");
            
             Task.Run( async () => 
             {
@@ -207,8 +210,12 @@ namespace Trucks
                 if (settlements.Count() > 0)
                 {
                     SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements);
-                    //foreach (int truckId in truckIds)
-                    string file = generator.Generate(year, weeks, truckid);
+                    int[] trucks = (truckid == null) ? GetTrucks(settlements) : new int[] { (int)truckid };
+                    foreach (int truck in trucks)
+                    {
+                        string file = generator.Generate(year, weeks, truck);
+                        System.Console.WriteLine($"Created {file}.");
+                    }
                 }
                 else
                 {
@@ -216,6 +223,15 @@ namespace Trucks
                 }
             }
             ).Wait();
+        }
+
+        private static int[] GetTrucks(List<SettlementHistory> settlements)
+        {
+            List<int> trucks = new List<int>();
+            foreach (var s in settlements)
+                trucks.AddRange(s.Credits.Select(c => c.TruckId).Where(t => t > 0));
+
+            return trucks.Distinct().ToArray();
         }
 
         private static void ConsolidateSettlements()

@@ -12,7 +12,7 @@
             "envFile": "${workspaceFolder}/.env",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/parser/bin/Debug/netcoreapp3.1/parser.dll",
-            "args": ["settlement", "2018", "45" , "14271"],
+            "args": ["settlement", "2019", "48"],
             "cwd": "${workspaceFolder}/parser",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
