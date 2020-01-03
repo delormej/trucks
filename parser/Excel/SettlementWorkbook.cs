@@ -5,51 +5,94 @@ namespace Trucks
 {
     public class SettlementWorkbook : ExcelWorkbook
     {
+        private static readonly Dictionary<string, string> _columns = GetSheetColumns();
         private const int MaxRows = 26;
-        private const int lastLoadRow = 6;
-        private Dictionary<string, string> columns;
+        private int _lastLoadRow = 5;
+        private string _outputFilename = null;
+        string _sheetName = null;
+        int _truck = 0;
+        string _driver = null;
+        DateTime _settlementDate;
 
-        public SettlementWorkbook(string templateFile)
+        public string TemplateFile = "Excel/SettlementWorkbookTemplate.xlsx";
+
+        public SettlementWorkbook(int year, int truck, string driver, DateTime settlementDate)
         {
-            columns = GetSheetColumns();
-            this.Open(templateFile);
-        }
-        
-        public void AddSheet(int week, int truck, string driver)
-        {}
-
-        public void AddCredits(IEnumerable<Credit> credits)
-        {}
-
-        public void AddDeductions(IEnumerable<Deduction> deductions)
-        {}
-
-        public void Save(string filename)
-        {}
-
-        private void AddLoadRow(Credit credit)
-        {
-            if (lastLoadRow >= MaxRows)
-                throw new ApplicationException($"Error, cannot exceed {MaxRows} loads per settlement week.");
-            
-            // string sheetName = GetSheetname(detail.Week);
-            // UpdateCellValue(sheetName, GetAddressname("Load"), detail.Load);
-            // UpdateCellValue(sheetName, GetAddressname("Miles"), detail.Miles.ToString());
+            _truck = truck;
+            _driver = driver;
+            _settlementDate = settlementDate;
+            _outputFilename = GetFilename(year, driver);
         }
 
-        private void SetDriver(string driver)
-        {
-            
+        public string Create()
+        {            
+            System.IO.File.Copy(TemplateFile, _outputFilename, true);
+            this.Open(_outputFilename);
+            return _outputFilename;                    
         }
 
-        private void SetTruck(int truckId)
+        public void AddSheet(int week, IEnumerable<Credit> credits, IEnumerable<Deduction> deductions)
         {
-
+            // TODO: fix this... 
+            // hard coding to just 1 sheet for the moment.
+            _sheetName = "Week_"; //GetSheetname(week);
+            SetTruck();
+            SetDriver();    
+            SetSettlementDate();
+            AddCredits(credits);
+            this.document.Save();
         }
 
-        private void SetSettlementDate(DateTime date)
+        private string GetFilename(int year, string driver)
         {
+            string format = $"{year} ({driver}) Settlement.xlsx";
+            return format;
+        }
 
+        private void AddCredits(IEnumerable<Credit> credits)
+        {
+            foreach (var c in credits)
+            {
+                if (++_lastLoadRow >= MaxRows)
+                    throw new ApplicationException($"Error, cannot exceed {MaxRows} loads per settlement week.");
+
+                UpdateCellValue("Load", c.ProNumber.Substring(c.ProNumber.Length - 5));
+                UpdateCellValue("Miles", c.Miles);
+                UpdateCellValue("Rev", c.ExtendedAmount);
+                UpdateCellValue("FSC", c.CreditAmount);
+                UpdateCellValue("Advance", c.AdvanceAmount);
+                UpdateCellValue("DH", c.DeadHead);
+                UpdateCellValue("EM", c.Empty);
+                UpdateCellValue("Tolls", c.Tolls);
+                UpdateCellValue("Other", c.Other);
+                UpdateCellValue("CBC", c.Canada);
+                UpdateCellValue("Stops", c.StopOff);
+                UpdateCellValue("Detent", c.Detention);
+                UpdateCellValue("H load", c.HandLoad);
+                UpdateCellValue("Layovr", c.Layover);
+                UpdateCellValue("Accessorial Other", c.Other);                                
+            }
+        }
+
+        private void AddDeductions(IEnumerable<Deduction> deductions)
+        {}
+
+        private void SetDriver()
+        {
+            const string DriverCell = "B1";
+            UpdateCellValue(_sheetName, DriverCell, _driver);            
+        }
+
+        private void SetTruck()
+        {
+            const string TruckIdCell = "B2";
+            UpdateCellValue(_sheetName, TruckIdCell, _truck.ToString());
+        }
+
+        private void SetSettlementDate()
+        {
+            const string SettlementDateCell = "C3";
+            UpdateCellValue(_sheetName, SettlementDateCell, _settlementDate.ToString("yyyy-MM-dd"));
         }
         
         private string GetSheetname(int week)
@@ -59,10 +102,27 @@ namespace Trucks
 
         private string GetAddressname(string column)
         {
-            return string.Format("{0}{1}", columns[column], lastLoadRow);
+            return string.Format("{0}{1}", _columns[column], _lastLoadRow);
         }
 
-        private Dictionary<string, string> GetSheetColumns() 
+        private void UpdateCellValue(string column, int value)
+        {
+            if (value > 0)
+                UpdateCellValue(_sheetName, GetAddressname(column), value.ToString());
+        }
+
+        private void UpdateCellValue(string column, double value)
+        {
+            if (value > 0)
+                UpdateCellValue(_sheetName, GetAddressname(column), value.ToString());
+        }
+
+        private void UpdateCellValue(string column, string value)
+        {
+            UpdateCellValue(_sheetName, GetAddressname(column), value);
+        }
+
+        private static Dictionary<string, string> GetSheetColumns() 
         {
             var list = new Dictionary<string, string>();
             list.Add("Load", "A");
@@ -83,5 +143,23 @@ namespace Trucks
 
             return list;
         }
+
+        ~SettlementWorkbook()
+        {
+            Dispose();
+        }
+
+        public override void Dispose()
+        {
+            try 
+            {
+                if (document != null)
+                {
+                    document.Close();
+                    document.Dispose();
+                }
+            }
+            catch{/*ignore any errors here*/}
+        }        
     }
 }

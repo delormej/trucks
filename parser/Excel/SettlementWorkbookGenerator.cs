@@ -17,29 +17,44 @@ namespace Trucks
 
         public string Generate(int year, int[] weeks, int truck)
         {
-            SettlementWorkbook workbook = new SettlementWorkbook("SettlementHistoryTemplate.xlsx");
-            string driver = null;
-
-            foreach (int week in weeks)
-            {
-                List<Credit> credits = new List<Credit>();
-                List<Deduction> deductions = new List<Deduction>();
-
-                foreach (SettlementHistory s in _settlements.Where(s => s.WeekNumber == week))
-                {
-                    credits.AddRange(s.Credits.Where(c => c.TruckId == truck));
-                    deductions.AddRange(s.Deductions.Where(d => d.TruckId == truck));
-                }
-
-                if (driver == null)
-                    driver = GetDriver(credits);
-                workbook.AddSheet(week, truck, driver);
-                workbook.AddCredits(credits);
-                workbook.AddDeductions(deductions);
-            }
+            string outputFile = null;
+            SettlementWorkbook workbook = null; 
             
-            string outputFile = GetFilename(year, driver);
-            workbook.Save(outputFile);
+            try
+            {
+                foreach (int week in weeks)
+                {
+                    List<Credit> credits = new List<Credit>();
+                    List<Deduction> deductions = new List<Deduction>();
+                    DateTime settlementDate = _settlements.Where(
+                        s => s.WeekNumber == week 
+                        && s.Credits.Where(c => c.TruckId == truck).Count() > 0
+                    ).First().SettlementDate;
+
+                    foreach (SettlementHistory s in _settlements.Where(s => s.WeekNumber == week))
+                    {
+                        credits.AddRange(s.Credits.Where(c => c.TruckId == truck));
+                        deductions.AddRange(s.Deductions.Where(d => d.TruckId == truck));
+                    }
+
+                    if (workbook == null)
+                    {
+                        workbook = new SettlementWorkbook(year, truck, GetDriver(credits), settlementDate);
+                        outputFile = workbook.Create();
+                    }
+                        
+                    workbook.AddSheet(week, credits, deductions);
+                }
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine($"Error generating workbook {outputFile ?? "null"}\n\t{e.Message}");
+            }
+            finally
+            {
+                if (workbook != null)
+                    workbook.Dispose();
+            }
 
             return outputFile;
         }
@@ -51,12 +66,6 @@ namespace Trucks
             string driver = credits.Where(c => c.CreditDescriptions == "FUEL SURCHARGE CREDIT")
                 .Select(c => c.Driver).First();
             return driver;
-        }
-
-        private string GetFilename(int year, string driver)
-        {
-            string format = $"{year} ({driver}) Settlement.xlsx";
-            return format;
         }
     }
 }
