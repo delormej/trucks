@@ -174,84 +174,88 @@ namespace Trucks
         }
 
         public void CopySheet(string source, string destination)
-        {           
-            WorksheetPart sourceSheetPart = GetWorksheetPart(source);
-            SpreadsheetDocument tempSheet = SpreadsheetDocument.Create(new MemoryStream(), document.DocumentType);
-            WorkbookPart tempWorkbookPart = tempSheet.AddWorkbookPart();
-            WorksheetPart tempWorksheetPart = tempWorkbookPart.AddPart<WorksheetPart>(sourceSheetPart);
-            WorksheetPart clonedSheet = wbPart.AddPart<WorksheetPart>(tempWorksheetPart);            
+        { 
+            throw new NotImplementedException("This is not working properly...");
 
-            Sheets sheets = wbPart.Workbook.GetFirstChild<Sheets>();
-            Sheet copiedSheet = new Sheet();
-            copiedSheet.Name = destination;
-            copiedSheet.Id = wbPart.GetIdOfPart(clonedSheet);
-            copiedSheet.SheetId = (uint)sheets.ChildElements.Count + 1;
-            sheets.Append(copiedSheet);
-            wbPart.Workbook.Save();
+            // WorksheetPart sourceSheetPart = GetWorksheetPart(source);
+            // SpreadsheetDocument tempSheet = SpreadsheetDocument.Create(new MemoryStream(), document.DocumentType);
+            // WorkbookPart tempWorkbookPart = tempSheet.AddWorkbookPart();
+            // WorksheetPart tempWorksheetPart = tempWorkbookPart.AddPart<WorksheetPart>(sourceSheetPart);
+            // WorksheetPart clonedSheet = wbPart.AddPart<WorksheetPart>(tempWorksheetPart);            
+
+            // Sheets sheets = wbPart.Workbook.GetFirstChild<Sheets>();
+            // Sheet copiedSheet = new Sheet();
+            // copiedSheet.Name = destination;
+            // copiedSheet.Id = wbPart.GetIdOfPart(clonedSheet);
+            // copiedSheet.SheetId = (uint)sheets.ChildElements.Count + 1;
+            // sheets.Append(copiedSheet);
+            // wbPart.Workbook.Save();
         }
 
         public void DeleteSheet(string sheetname)
         {
-            Sheet theSheet = wbPart.Workbook.Descendants<Sheet>().Where(s => s.Name == sheetname).FirstOrDefault();
-            if (theSheet == null)
-                throw new ArgumentException($"Sheet {sheetname} not found.");
+            throw new NotImplementedException("This is not working properly...");
 
-            Int32Value Sheetid = (int)theSheet.SheetId.Value;
+            // Sheet theSheet = wbPart.Workbook.Descendants<Sheet>().Where(s => s.Name == sheetname).FirstOrDefault();
+            // if (theSheet == null)
+            //     throw new ArgumentException($"Sheet {sheetname} not found.");
 
-            // Remove the sheet reference from the workbook.
-            WorksheetPart worksheetPart = (WorksheetPart)(wbPart.GetPartById(theSheet.Id));
-            theSheet.Remove();
+            // Int32Value Sheetid = (int)theSheet.SheetId.Value;
 
-            // Delete the worksheet part.
-            wbPart.DeletePart(worksheetPart);
+            // // Remove the sheet reference from the workbook.
+            // WorksheetPart worksheetPart = (WorksheetPart)(wbPart.GetPartById(theSheet.Id));
+            // theSheet.Remove();
 
-            //Get the DefinedNames
-            var definedNames = wbPart.Workbook.Descendants<DefinedNames>().FirstOrDefault();
-            if (definedNames != null)
-            {
-                List<DefinedName> defNamesToDelete = new List<DefinedName>();
+            // // Delete the worksheet part.
+            // wbPart.DeletePart(worksheetPart);
 
-                foreach (DefinedName Item in definedNames)
-                {
-                    // This condition checks to delete only those names which are part of Sheet in question
-                    if (Item.Text.Contains(sheetname + "!"))
-                        defNamesToDelete.Add(Item);
-                }
+            // //Get the DefinedNames
+            // var definedNames = wbPart.Workbook.Descendants<DefinedNames>().FirstOrDefault();
+            // if (definedNames != null)
+            // {
+            //     List<DefinedName> defNamesToDelete = new List<DefinedName>();
 
-                foreach (DefinedName Item in defNamesToDelete)
-                {
-                    Item.Remove();
-                }
+            //     foreach (DefinedName Item in definedNames)
+            //     {
+            //         // This condition checks to delete only those names which are part of Sheet in question
+            //         if (Item.Text.Contains(sheetname + "!"))
+            //             defNamesToDelete.Add(Item);
+            //     }
 
-            }
-            // Get the CalculationChainPart 
-            //Note: An instance of this part type contains an ordered set of references to all cells in all worksheets in the 
-            //workbook whose value is calculated from any formula
+            //     foreach (DefinedName Item in defNamesToDelete)
+            //     {
+            //         Item.Remove();
+            //     }
 
-            CalculationChainPart calChainPart;
-            calChainPart = wbPart.CalculationChainPart;
-            if (calChainPart != null)
-            {
-                var calChainEntries = calChainPart.CalculationChain.Descendants<CalculationCell>().Where(c => c.SheetId == Sheetid);
-                List<CalculationCell> calcsToDelete = new List<CalculationCell>();
-                foreach (CalculationCell Item in calChainEntries)
-                {
-                    calcsToDelete.Add(Item);
-                }
+            // }
+            // // Get the CalculationChainPart 
+            // //Note: An instance of this part type contains an ordered set of references to all cells in all worksheets in the 
+            // //workbook whose value is calculated from any formula
 
-                foreach (CalculationCell Item in calcsToDelete)
-                {
-                    Item.Remove();
-                }
+            // CalculationChainPart calChainPart;
+            // calChainPart = wbPart.CalculationChainPart;
+            // if (calChainPart != null)
+            // {
+            //     var calChainEntries = calChainPart.CalculationChain.Descendants<CalculationCell>().Where(c => c.SheetId == Sheetid);
+            //     List<CalculationCell> calcsToDelete = new List<CalculationCell>();
+            //     foreach (CalculationCell Item in calChainEntries)
+            //     {
+            //         calcsToDelete.Add(Item);
+            //     }
 
-                if (calChainPart.CalculationChain.Count() == 0)
-                {
-                    wbPart.DeletePart(calChainPart);
-                }
-            }
+            //     foreach (CalculationCell Item in calcsToDelete)
+            //     {
+            //         Item.Remove();
+            //     }
 
-            // Save the workbook.
-            wbPart.Workbook.Save();            
+            //     if (calChainPart.CalculationChain.Count() == 0)
+            //     {
+            //         wbPart.DeletePart(calChainPart);
+            //     }
+            // }
+
+            // // Save the workbook.
+            // wbPart.Workbook.Save();            
         }
     }
 }

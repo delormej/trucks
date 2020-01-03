@@ -14,7 +14,7 @@ namespace Trucks
         string _driver = null;
         DateTime _settlementDate;
 
-        public string TemplateFile = "Excel/SettlementWorkbookTemplate.xlsx";
+        public string TemplateFile = "Excel/1-Settlement Template 50-50 DET SOLO.xlsx";
 
         public SettlementWorkbook(int year, int truck, string driver, DateTime settlementDate)
         {
@@ -34,7 +34,6 @@ namespace Trucks
         public void AddSheet(int week, IEnumerable<Credit> credits, IEnumerable<Deduction> deductions)
         {
             _sheetName = GetSheetname(week);
-            this.CopySheet("Week_", _sheetName);
              _lastLoadRow = 5;
 
             SetTruck();
