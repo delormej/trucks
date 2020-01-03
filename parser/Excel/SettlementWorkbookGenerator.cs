@@ -44,6 +44,8 @@ namespace Trucks
                     }
                         
                     workbook.AddSheet(week, credits, deductions);
+                    // workbook.DeleteSheet("Week_");
+                    workbook.Save();
                 }
             }
             catch (Exception e)

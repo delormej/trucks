@@ -33,13 +33,17 @@ namespace Trucks
 
         public void AddSheet(int week, IEnumerable<Credit> credits, IEnumerable<Deduction> deductions)
         {
-            // TODO: fix this... 
-            // hard coding to just 1 sheet for the moment.
-            _sheetName = "Week_"; //GetSheetname(week);
+            _sheetName = GetSheetname(week);
+            this.CopySheet("Week_", _sheetName);
+
             SetTruck();
             SetDriver();    
             SetSettlementDate();
             AddCredits(credits);
+        }
+
+        public void Save()
+        {
             this.document.Save();
         }
 
