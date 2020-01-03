@@ -45,15 +45,15 @@ namespace Trucks
                             workbook = new SettlementWorkbook(year, truck, driver, settlementDate);
                             outputFile = workbook.Create();
                         }
-                        else
-                        {
-                            System.Console.WriteLine($"No driver found for {week}");
-                        }
+                        // TODO: if no driver, these were entries attributable back to corp... how do we handle?
                     }
-                        
-                    workbook.AddSheet(week, credits, deductions);
-                    // workbook.DeleteSheet("Week_");
-                    workbook.Save();
+
+                    if (workbook != null)
+                    {
+                        workbook.AddSheet(week, credits, deductions);
+                        // workbook.DeleteSheet("Week_");
+                        workbook.Save();
+                    }
                 }
             }
             catch (Exception e)
@@ -73,7 +73,7 @@ namespace Trucks
         {
             // TODO: Driver can be different for each line... how do we reconcile this??
             string driver = credits.Where(c => c.CreditDescriptions == "FUEL SURCHARGE CREDIT")
-                .Select(c => c.Driver).First();
+                .Select(c => c.Driver).FirstOrDefault();
             return driver;
         }
     }

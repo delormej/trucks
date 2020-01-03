@@ -154,5 +154,18 @@ namespace Trucks
         {
             Dispose();
         }
+
+        public override void Dispose()
+        {
+            try 
+            {
+                if (document != null)
+                {
+                    document.Close();
+                    document.Dispose();
+                }
+            }
+            catch{/*ignore any errors here*/}
+        }                
     }
 }
