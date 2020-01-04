@@ -92,7 +92,7 @@ namespace Trucks
                 if (row++ > MaxRows)
                     throw new ApplicationException("No available rows to put fuel charge.");
 
-            UpdateCellValue(FuelCell(), fuel);
+            UpdateCellValue(_sheetName, FuelCell(), fuel.ToString("0.00"));
 
             string FuelCell()
             {

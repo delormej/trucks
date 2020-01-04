@@ -25,6 +25,11 @@ namespace Trucks
             if (charges?.Count() > 0)
                 fuel = charges.Sum(c => c.NetCost);
             
+            if (fuel > 0)
+                System.Console.WriteLine($"Found ${fuel.ToString("0.00")} in fuel.");
+            else
+                System.Console.WriteLine($"No fuel found for {truck}.");
+
             return fuel;
         }
 
