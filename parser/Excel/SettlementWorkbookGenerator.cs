@@ -21,25 +21,16 @@ namespace Trucks
         public string Generate(int year, int[] weeks, int truck)
         {
             string outputFile = null;
-            SettlementWorkbook workbook = null; 
+            SettlementWorkbook workbook = null;
             
             try
             {
                 foreach (int week in weeks)
                 {
-                    DateTime settlementDate = _settlements.Where(
-                        s => s.WeekNumber == week 
-                        && s.Credits.Where(c => c.TruckId == truck).Count() > 0
-                    ).First().SettlementDate;
-
-                    List<Credit> credits = new List<Credit>();
-                    List<Deduction> deductions = new List<Deduction>();
-
-                    foreach (SettlementHistory s in _settlements.Where(s => s.WeekNumber == week))
-                    {
-                        credits.AddRange(s.Credits.Where(c => c.TruckId == truck));
-                        deductions.AddRange(s.Deductions.Where(d => d.TruckId == truck));
-                    }
+                    DateTime settlementDate = GetSettlementDate(week, truck);
+                    SettlementHistory settlement = GetSettlement(week, truck);
+                    IEnumerable<Credit> credits = settlement.Credits.Where(c => c.TruckId == truck);
+                    IEnumerable<Deduction> deductions = null;
 
                     if (workbook == null)
                     {
@@ -51,29 +42,25 @@ namespace Trucks
                         }
                         // TODO: if no driver, these were entries attributable back to corp... how do we handle?
                     }
+                    if (workbook == null)
+                        continue;
 
-                    if (workbook != null)
+                    workbook.AddSheet(week);
+                    workbook.AddCredits(credits);
+                    
+                    if (_fuelRepository != null)
                     {
-                        workbook.AddSheet(week);
-                        workbook.AddCredits(credits);
-                        if (_fuelRepository != null)
-                        {
-                            double fuel = _fuelRepository.GetFuelCharges(week, truck);
-                            workbook.AddFuelCharge(fuel);
-                            
-                            // Filter deductions
-                            var deductionsToRemove = deductions.Where(d => 
-                                d.Description == "COMCHEK PRO ADVANCE");
-                            deductions = deductions.Except(deductionsToRemove).ToList();
-                        }
-                        
-                        var occupationalInsurance = deductions.Where(d => 
-                            d.Description == "OCCUPATIONAL INSURANCE").FirstOrDefault();
-                        if (occupationalInsurance != null)
-                            workbook.AddOccupationalInsurance(occupationalInsurance.Amount);
-
-                        workbook.Save();
+                        double fuel = _fuelRepository.GetFuelCharges(week, truck);
+                        workbook.AddFuelCharge(fuel);
+                        deductions = GetDeductions(settlement, truck);
                     }
+                    
+                    var occupationalInsurance = deductions.Where(d => 
+                        d.Description == "OCCUPATIONAL INSURANCE").FirstOrDefault();
+                    if (occupationalInsurance != null)
+                        workbook.AddOccupationalInsurance(occupationalInsurance.Amount);
+
+                    workbook.Save();
                 }
             }
             catch (Exception e)
@@ -95,6 +82,36 @@ namespace Trucks
             string driver = credits.Where(c => c.CreditDescriptions == "FUEL SURCHARGE CREDIT")
                 .Select(c => c.Driver).FirstOrDefault();
             return driver;
+        }
+
+        private SettlementHistory GetSettlement(int week, int truck)
+        {
+            SettlementHistory settlement = null;
+            foreach (var s in _settlements.Where(s => s.WeekNumber == week))
+            {
+                if (s.Credits.Where(c => c.TruckId == truck).Count() > 0)
+                {
+                    settlement = s;
+                    break;
+                }
+            }
+
+            return settlement;
+        }
+
+        private DateTime GetSettlementDate(int week, int truck)
+        {
+            return _settlements.Where(
+                        s => s.WeekNumber == week 
+                        && s.Credits.Where(c => c.TruckId == truck).Count() > 0
+                    ).First().SettlementDate;            
+        }
+
+        private IEnumerable<Deduction> GetDeductions(SettlementHistory settlement, int truck)
+        {
+            IEnumerable<Deduction> deductions = settlement.Deductions.Where(d => d.TruckId == truck);
+            var deductionsToRemove = deductions.Where(d => d.Description == "COMCHEK PRO ADVANCE");
+            return deductions.Except(deductionsToRemove); 
         }
 
         // Externalize business logic into a predicate?
