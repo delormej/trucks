@@ -27,8 +27,12 @@ namespace Trucks
             {
                 foreach (int week in weeks)
                 {
-                    DateTime settlementDate = GetSettlementDate(week, truck);
                     SettlementHistory settlement = GetSettlement(week, truck);
+                    if (settlement == null)
+                    {
+                        System.Console.WriteLine($"No settlement found for truck {truck} on week {week}.");
+                        continue;
+                    }
                     IEnumerable<Deduction> deductions = settlement.Deductions.Where(d => d.TruckId == truck);
                     IEnumerable<Credit> credits = settlement.Credits.Where(c => c.TruckId == truck);
 
@@ -37,13 +41,15 @@ namespace Trucks
                         string driver = GetDriver(credits);
                         if (driver != null)
                         {
-                            workbook = new SettlementWorkbook(year, truck, driver, settlementDate);
+                            workbook = new SettlementWorkbook(year, truck, driver, settlement.SettlementDate);
                             outputFile = workbook.Create();
                         }
-                        // TODO: if no driver, these were entries attributable back to corp... how do we handle?
                     }
                     if (workbook == null)
+                    {
+                        System.Console.WriteLine($"No workbook created for truck {truck} on week {week}.");
                         continue;
+                    }
 
                     workbook.AddSheet(week);
                     workbook.AddSettlementId(settlement.SettlementId);
@@ -87,25 +93,10 @@ namespace Trucks
 
         private SettlementHistory GetSettlement(int week, int truck)
         {
-            SettlementHistory settlement = null;
-            foreach (var s in _settlements.Where(s => s.WeekNumber == week))
-            {
-                if (s.Credits.Where(c => c.TruckId == truck).Count() > 0)
-                {
-                    settlement = s;
-                    break;
-                }
-            }
-
-            return settlement;
-        }
-
-        private DateTime GetSettlementDate(int week, int truck)
-        {
             return _settlements.Where(
                         s => s.WeekNumber == week 
                         && s.Credits.Where(c => c.TruckId == truck).Count() > 0
-                    ).First().SettlementDate;            
+                    ).FirstOrDefault();            
         }
 
         private IEnumerable<Credit> GetCreditsWithoutComchek(SettlementHistory settlement, int truck)
