@@ -85,18 +85,18 @@ namespace Trucks
         {
             if (fuel == default(double))
                 return;
-
-            int row = 6;
+            
+            _lastLoadRow = 6;
 
             while (!string.IsNullOrWhiteSpace(GetCellValue(_sheetName, FuelCell())))
-                if (row++ > MaxRows)
+                if (++_lastLoadRow >= MaxRows)
                     throw new ApplicationException("No available rows to put fuel charge.");
 
             UpdateCellValue(_sheetName, FuelCell(), fuel.ToString("0.00"));
 
             string FuelCell()
             {
-                return $"F{row}";
+                return $"F{_lastLoadRow}";
             }
         }
 
@@ -104,6 +104,12 @@ namespace Trucks
         {
             const string cell = "C32";
             UpdateCellValue(_sheetName, cell, value.ToString());
+        }
+
+        public void AddSettlementId(string settlementId)
+        {
+            const string cell = "C41";
+            UpdateCellValue(_sheetName, cell, settlementId);
         }
 
         private void SetDriver()

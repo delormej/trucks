@@ -29,8 +29,8 @@ namespace Trucks
                 {
                     DateTime settlementDate = GetSettlementDate(week, truck);
                     SettlementHistory settlement = GetSettlement(week, truck);
+                    IEnumerable<Deduction> deductions = settlement.Deductions.Where(d => d.TruckId == truck);
                     IEnumerable<Credit> credits = settlement.Credits.Where(c => c.TruckId == truck);
-                    IEnumerable<Deduction> deductions = null;
 
                     if (workbook == null)
                     {
@@ -46,20 +46,21 @@ namespace Trucks
                         continue;
 
                     workbook.AddSheet(week);
-                    workbook.AddCredits(credits);
-                    
+                    workbook.AddSettlementId(settlement.SettlementId);
+
                     if (_fuelRepository != null)
                     {
                         double fuel = _fuelRepository.GetFuelCharges(week, truck);
                         workbook.AddFuelCharge(fuel);
-                        deductions = GetDeductions(settlement, truck);
+                        credits = GetCreditsWithoutComchek(settlement, truck);
                     }
-                    
-                    var occupationalInsurance = deductions.Where(d => 
-                        d.Description == "OCCUPATIONAL INSURANCE").FirstOrDefault();
-                    if (occupationalInsurance != null)
-                        workbook.AddOccupationalInsurance(occupationalInsurance.Amount);
 
+                    workbook.AddCredits(credits);                    
+                    
+                    double occInsurance = GetOccupationalInsurance(deductions);
+                    if (occInsurance > 0)
+                        workbook.AddOccupationalInsurance(occInsurance);
+                        
                     workbook.Save();
                 }
             }
@@ -107,11 +108,22 @@ namespace Trucks
                     ).First().SettlementDate;            
         }
 
-        private IEnumerable<Deduction> GetDeductions(SettlementHistory settlement, int truck)
+        private IEnumerable<Credit> GetCreditsWithoutComchek(SettlementHistory settlement, int truck)
         {
-            IEnumerable<Deduction> deductions = settlement.Deductions.Where(d => d.TruckId == truck);
-            var deductionsToRemove = deductions.Where(d => d.Description == "COMCHEK PRO ADVANCE");
-            return deductions.Except(deductionsToRemove); 
+            IEnumerable<Credit> credits = settlement.Credits.Where(c => c.TruckId == truck);
+            var toRemove = credits.Where(c => c.AdvanceDescription == "COMCHEK PRO ADVANCE");
+            return credits.Except(toRemove); 
+        }
+
+        private double GetOccupationalInsurance(IEnumerable<Deduction> deductions)
+        {
+            double value = 0.0;
+            var occupationalInsurance = deductions.Where(d => 
+                d.Description == "OCCUPATIONAL INSURANCE").FirstOrDefault();
+            if (occupationalInsurance != null)
+                value = occupationalInsurance.Amount;
+
+            return value;
         }
 
         // Externalize business logic into a predicate?
