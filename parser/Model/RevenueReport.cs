@@ -27,9 +27,9 @@ namespace Trucks
             public static string Header = "Year, WeekNumber, Date, TruckId, Miles, TotalPaid, TotalDeductions"; 
         }
 
-        private Repository repository;
+        private SettlementRepository repository;
 
-        public RevenueReport(Repository repository)
+        public RevenueReport(SettlementRepository repository)
         {
             this.repository = repository;
         }

@@ -84,7 +84,7 @@ namespace Trucks
 
                 if (mergedSettlements.Count > 0)
                 {
-                    Repository repository = new Repository();
+                    SettlementRepository repository = new SettlementRepository();
                     repository.SaveSettlements(mergedSettlements);            
                 }
             }
@@ -159,7 +159,7 @@ namespace Trucks
                 PantherClient panther = new PantherClient(company, pantherPassword);
                 List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
 
-                Repository repository = new Repository();
+                SettlementRepository repository = new SettlementRepository();
                 List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
 
                 List<SettlementHistory> settlementsToUpdate = 
@@ -176,7 +176,7 @@ namespace Trucks
 
             var task = Task.Run(async () => 
             {
-                Repository repository = new Repository();
+                SettlementRepository repository = new SettlementRepository();
                 List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
                 repository.SaveSettlements(savedSettlements);
             });
@@ -187,7 +187,7 @@ namespace Trucks
         {
             List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
 
-            Repository repository = new Repository();
+            SettlementRepository repository = new SettlementRepository();
             List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
 
             // Don't try to convert settlements we've already persisted.
@@ -215,7 +215,7 @@ namespace Trucks
                 if (fuelCsv != null)
                     fuelRepository = new FuelChargeRepository(fuelCsv);
 
-                Repository repository = new Repository();    
+                SettlementRepository repository = new SettlementRepository();    
                 List<SettlementHistory> settlements = await repository.GetSettlementsByWeekAsync(year, weeks);
                 if (settlements.Count() > 0)
                 {
@@ -249,7 +249,7 @@ namespace Trucks
             System.Console.WriteLine("Consolidating settlements.");
             var task = Task.Run( async () => 
             {
-                Repository repository = new Repository();
+                SettlementRepository repository = new SettlementRepository();
                 await repository.ConsolidateSettlementsAsync();
             });
             task.Wait();
@@ -260,7 +260,7 @@ namespace Trucks
             System.Console.WriteLine("Generating report.");
             var task = Task.Run( async () => 
             {
-                Repository repository = new Repository();
+                SettlementRepository repository = new SettlementRepository();
                 RevenueReport report = new RevenueReport(repository);
                 await report.GetTruckRevenueGroupBySettlementAsync();
             });

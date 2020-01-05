@@ -9,12 +9,12 @@ namespace Trucks
     public class ConvertedExcelFiles
     {
          ExcelConverter converter;
-         Repository repository;
+         SettlementRepository repository;
 
         public ConvertedExcelFiles(string convertApiKey)
         {
             converter = new ExcelConverter(convertApiKey);
-            repository = new Repository();
+            repository = new SettlementRepository();
         }
 
         /// <summary>
@@ -23,8 +23,6 @@ namespace Trucks
         /// <summary>
         public void Process(PantherClient pantherClient)
         {            
-            Repository repository = new Repository();
-
             var getConverterResults = converter.QueryAllAsync();
             var getSettlementHeaders = pantherClient.GetSettlementsAsync();
             Task.WaitAll(getConverterResults, getSettlementHeaders);

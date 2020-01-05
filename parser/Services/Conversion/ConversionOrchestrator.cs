@@ -14,7 +14,7 @@ namespace Trucks
 
         Dictionary<int, SettlementHistory> pendingDownload;
 
-        Repository repository;                
+        SettlementRepository repository;                
 
         // 1. Create orchestrator with list of downloaded files.
         // 2. Upload xls to converter
@@ -32,7 +32,7 @@ namespace Trucks
             jobs = new List<Timer>();
 
             pendingDownload = new Dictionary<int, SettlementHistory>();
-            repository = new Repository();
+            repository = new SettlementRepository();
         }
 
         public async Task StartAsync(int maxUploadCount = 20)
