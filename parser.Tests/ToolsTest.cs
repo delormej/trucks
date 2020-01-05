@@ -12,13 +12,14 @@ namespace parser.Tests
             PrintYearWeek(DateTime.Parse("2019/12/7"));
             PrintYearWeek(DateTime.Parse("2019/12/10"));
             PrintYearWeek(DateTime.Parse("2019/12/14"));
-            PrintYearWeek(DateTime.Parse("2019/12/17"));
+            PrintYearWeek(DateTime.Parse("2019/12/16"));
             PrintYearWeek(DateTime.Parse("2019/12/24"));
             PrintYearWeek(DateTime.Parse("2019/12/31"));
             PrintYearWeek(DateTime.Parse("2020/1/3"));
             PrintYearWeek(DateTime.Parse("2020/1/10"));
             PrintYearWeek(DateTime.Parse("2020/1/16"));
-
+            PrintYearWeek(DateTime.Parse("2020/12/8"));
+            PrintYearWeek(DateTime.Parse("2020/12/16"));
 
             DateTime settlementDate = DateTime.Parse("2019/01/14");
             int year, week;

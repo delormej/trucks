@@ -205,7 +205,7 @@ namespace Trucks
         private static void CreateSettlementStatement(int year, int week, 
                 int? truckid = null, string fuelCsv = null)
         {
-            System.Console.WriteLine($"Creating settlements.");
+            System.Console.WriteLine($"Creating settlements {year}/{week} {truckid?.ToString()}");
            
             Task.Run( async () => 
             {

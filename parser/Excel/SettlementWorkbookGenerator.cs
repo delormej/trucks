@@ -54,6 +54,12 @@ namespace Trucks
                     workbook.AddSheet(week);
                     workbook.AddSettlementId(settlement.SettlementId);
 
+                    //
+                    // TODO: currently this is derived *IF* we find fuel charges, however
+                    // this logic is actually based on whether the DRIVER is setup for 
+                    // comchek or not.  Need to fix this.
+                    //
+                    #warning FIX THIS: Need to get Comchek flag from Driver.
                     bool ignoreComchek = false;
                     if (_fuelRepository != null)
                     {
