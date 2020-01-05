@@ -38,14 +38,15 @@ namespace Trucks
             if (_charges == null)
                 throw new ApplicationException("No fuel charges available.");
             
-            return _charges.Where(c => GetWeek(c.TransactionDate) == week);
+            return _charges.Where(c => c.Week == week);
+        }
 
-            int GetWeek(string date)
-            { 
-                int week, year;
-                Tools.GetWeekNumber(DateTime.Parse(date), out week, out year);
-                return week;
-            }
+        /// <summary>
+        /// Persists all charges to backing datastore.
+        /// </summary>
+        public void Save()
+        {
+
         }
 
         private void Load(string filename)
