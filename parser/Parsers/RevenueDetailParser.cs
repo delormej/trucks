@@ -36,7 +36,14 @@ namespace Trucks
         public double Linehaul {get;set;}
         public double FuelSurcharge {get;set;}
         public double Canada {get;set;}
-        public int Week { get { return Tools.GetWeekNumber(this.Date); } }
+        public int Week { 
+            get 
+            { 
+                int week, year;
+                Tools.GetWeekNumber(this.Date, out week, out year);
+                return week; 
+            } 
+        }
     }
 
     public class Driver

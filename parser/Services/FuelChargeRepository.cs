@@ -42,7 +42,9 @@ namespace Trucks
 
             int GetWeek(string date)
             { 
-                return Tools.GetWeekNumber(DateTime.Parse(date));
+                int week, year;
+                Tools.GetWeekNumber(DateTime.Parse(date), out week, out year);
+                return week;
             }
         }
 

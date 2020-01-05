@@ -16,8 +16,10 @@ namespace Trucks
             set 
             {
                 this.settlementDate = value;
-                this.WeekNumber = Tools.GetWeekNumber(settlementDate);
-                this.Year = settlementDate.Year;
+                int week, year;
+                Tools.GetWeekNumber(this.settlementDate, out week, out year);
+                this.WeekNumber = week;
+                this.Year = year;
             }
         }
         public int WeekNumber { get; set; }
