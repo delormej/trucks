@@ -54,14 +54,18 @@ namespace Trucks
                     workbook.AddSheet(week);
                     workbook.AddSettlementId(settlement.SettlementId);
 
+                    bool ignoreComchek = false;
                     if (_fuelRepository != null)
                     {
                         double fuel = _fuelRepository.GetFuelCharges(week, truck);
-                        workbook.AddFuelCharge(fuel);
-                        credits = GetCreditsWithoutComchek(settlement, truck);
+                        if (fuel > 0)
+                        {
+                            workbook.AddFuelCharge(fuel);
+                            ignoreComchek = true;
+                        }
                     }
 
-                    workbook.AddCredits(credits);                    
+                    workbook.AddCredits(credits, ignoreComchek);                    
                     
                     double occInsurance = GetOccupationalInsurance(deductions);
                     if (occInsurance > 0)
@@ -97,13 +101,6 @@ namespace Trucks
                         s => s.WeekNumber == week 
                         && s.Credits.Where(c => c.TruckId == truck).Count() > 0
                     ).FirstOrDefault();            
-        }
-
-        private IEnumerable<Credit> GetCreditsWithoutComchek(SettlementHistory settlement, int truck)
-        {
-            IEnumerable<Credit> credits = settlement.Credits.Where(c => c.TruckId == truck);
-            var toRemove = credits.Where(c => c.AdvanceDescription == "COMCHEK PRO ADVANCE");
-            return credits.Except(toRemove); 
         }
 
         private double GetOccupationalInsurance(IEnumerable<Deduction> deductions)

@@ -52,7 +52,7 @@ namespace Trucks
             return format;
         }
 
-        public void AddCredits(IEnumerable<Credit> credits)
+        public void AddCredits(IEnumerable<Credit> credits, bool ignoreComchek)
         {
             foreach (var c in credits)
             {
@@ -64,7 +64,8 @@ namespace Trucks
                 UpdateCellValue("Miles", c.Miles);
                 UpdateCellValue("Rev", c.ExtendedAmount);
                 UpdateCellValue("FSC", c.CreditAmount);
-                UpdateCellValue("Advance", c.AdvanceAmount);
+                if (c.AdvanceDescription == "COMCHEK PRO ADVANCE" && !ignoreComchek)
+                    UpdateCellValue("Advance", c.AdvanceAmount);
                 UpdateCellValue("DH", c.DeadHead);
                 UpdateCellValue("EM", c.Empty);
                 UpdateCellValue("Tolls", c.Tolls);
