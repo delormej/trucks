@@ -14,7 +14,7 @@ namespace Trucks
         string _driver = null;
         DateTime _settlementDate;
 
-        public string TemplateFile = "Excel/1-Settlement Template 50-50 DET SOLO.xlsx";
+        public string TemplateFile = "Excel/template.xlsx";
 
         public SettlementWorkbook(int year, int truck, string driver, DateTime settlementDate)
         {
