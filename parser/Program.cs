@@ -58,6 +58,10 @@ namespace Trucks
                     else
                         CreateSettlementStatement(year, week);
                 }
+                else if (command == "fixtemplate")
+                {
+                    FixTemplate(args[1]);
+                }
             }
         }
 
@@ -265,6 +269,22 @@ namespace Trucks
                 await report.GetTruckRevenueGroupBySettlementAsync();
             });
             task.Wait();            
+        }
+
+        private static void FixTemplate(string template)
+        {
+            System.Console.WriteLine("Fixing template cells C32, AA31");
+            const string formula = "IF(B27>0,(0.04*B27)+20,0)"; 
+            using (var wb = new SettlementHistoryWorkbook(template))
+            {
+                for (int i = 1; i <= 52; i++)
+                {
+                    string sheet = $"Week_{i}";
+                    wb.UpdateCellValue(sheet, "C32", "0");
+                    wb.UpdateCellFormula(sheet, "AA31", formula);
+                }
+                wb.Save();
+            }
         }
 
         private static void ShowUsage(string[] args)

@@ -29,15 +29,15 @@ namespace Trucks
 
         public virtual void Dispose()
         {
-            // try 
-            // {
-            //     if (document != null)
-            //     {
-            //         document.Close();
-            //         document.Dispose();
-            //     }
-            // }
-            // catch{/*ignore any errors here*/}
+            try 
+            {
+                if (document != null)
+                {
+                    document.Close();
+                    document.Dispose();
+                }
+            }
+            catch{/*ignore any errors here*/}
         }
 
         public void Open(string fileName)
@@ -47,6 +47,11 @@ namespace Trucks
                 throw new ArgumentException("Unable to open file.");
             // Retrieve a reference to the workbook part.
             wbPart = document.WorkbookPart;
+        }
+
+        public void Save()
+        {
+            this.document.Save();
         }
 
         // Retrieve the value of a cell, given a file name, sheet name, 
@@ -141,6 +146,26 @@ namespace Trucks
             wbPart.Workbook.CalculationProperties.ForceFullCalculation = true;
             wbPart.Workbook.CalculationProperties.FullCalculationOnLoad = true;
             wsPart.Worksheet.Save();
+        }
+
+        public void UpdateCellFormula(string sheetName, string addressName, string formula)
+        {
+            WorksheetPart wsPart = GetWorksheetPart(sheetName);
+            Cell theCell = GetCell(wsPart, addressName);
+            if (theCell == null)
+            {
+                // Only supports updating the value of an existing cell, if it doesn't exist - throw an error.
+                // Here's how to add a new cell if it doesn't exist:
+                // https://docs.microsoft.com/en-us/office/open-xml/how-to-insert-text-into-a-cell-in-a-spreadsheet#sample-code
+                throw new ArgumentException("Cell address does not refer to an existing cell in the workbook.");
+            }
+
+            theCell.DataType = new EnumValue<CellValues>(CellValues.Number);
+            theCell.CellFormula = new CellFormula(formula);
+            wsPart.Worksheet.Save();           
+
+            wbPart.Workbook.CalculationProperties.ForceFullCalculation = true;
+            wbPart.Workbook.CalculationProperties.FullCalculationOnLoad = true;       
         }
 
         private WorksheetPart GetWorksheetPart(string sheetName)

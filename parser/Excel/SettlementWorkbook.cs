@@ -41,11 +41,6 @@ namespace Trucks
             SetSettlementDate();
         }
 
-        public void Save()
-        {
-            this.document.Save();
-        }
-
         private string GetFilename(int year, string driver)
         {
             string format = $"{year} ({driver}) Settlement.xlsx";
