@@ -221,7 +221,10 @@ namespace Trucks
                 
                 FuelChargeRepository fuelRepository = null;
                 if (fuelCsv != null)
-                    fuelRepository = new FuelChargeRepository(fuelCsv);
+                {
+                    fuelRepository = new FuelChargeRepository();
+                    fuelRepository.Load(fuelCsv);
+                }
 
                 SettlementRepository repository = new SettlementRepository();    
                 List<SettlementHistory> settlements = await repository.GetSettlementsByWeekAsync(year, weeks);
@@ -294,7 +297,8 @@ namespace Trucks
         private static void SaveFuelCharges(string file)
         {
             System.Console.WriteLine($"Saving {file} fuel charges to database.");
-            FuelChargeRepository repository = new FuelChargeRepository(file);
+            FuelChargeRepository repository = new FuelChargeRepository();
+            repository.Load(file);
             // repository.EnsureDatabaseAsync().Wait();
             System.Console.WriteLine($"Found {repository.FuelCharges.Count()} charges.");
             var task = Task.Run(() => repository.SaveAsync());

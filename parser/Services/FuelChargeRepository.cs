@@ -14,9 +14,8 @@ namespace Trucks
     {
         List<FuelCharge> _charges;
 
-        public FuelChargeRepository(string filename)
+        public FuelChargeRepository()
         {
-            Load(filename);
         }
 
         public List<FuelCharge> FuelCharges { get { return _charges; }}
@@ -67,7 +66,7 @@ namespace Trucks
             }
         }
 
-        private void Load(string filename)
+        public void Load(string filename)
         {
             string csv = File.ReadAllText(filename);
             StringBuilder sb = new StringBuilder();
