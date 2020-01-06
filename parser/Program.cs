@@ -62,6 +62,10 @@ namespace Trucks
                 {
                     FixTemplate(args[1]);
                 }
+                else if (command == "savefuel")
+                {
+                    SaveFuelCharges(args[1]);
+                }                
             }
         }
 
@@ -285,6 +289,16 @@ namespace Trucks
                 }
                 wb.Save();
             }
+        }
+
+        private static void SaveFuelCharges(string file)
+        {
+            System.Console.WriteLine($"Saving {file} fuel charges to database.");
+            FuelChargeRepository repository = new FuelChargeRepository(file);
+            // repository.EnsureDatabaseAsync().Wait();
+            System.Console.WriteLine($"Found {repository.FuelCharges.Count()} charges.");
+            var task = Task.Run(() => repository.SaveAsync());
+            task.Wait();
         }
 
         private static void ShowUsage(string[] args)

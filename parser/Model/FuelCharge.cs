@@ -6,6 +6,7 @@ namespace Trucks
     public class FuelCharge
     {
         private string _id;
+        private int _week;
 
         public FuelCharge() {}
 
@@ -34,7 +35,7 @@ namespace Trucks
                     return default(int);
                 }
             }
-            set { Week = value; } // Really shouldn't have a set implementation, but seems to need to be here for serialization to work.
+            set { _week = value; } // Really shouldn't have a set implementation, but seems to need to be here for serialization to work.
         }
 
         [JsonProperty("Transaction_Date")]
@@ -51,7 +52,7 @@ namespace Trucks
 
         public override string ToString()
         {
-            return $"{id}, {TruckId}, {TransactionDate}, {NetCost}";
+            return $"{TruckId}, {TransactionDate}, {NetCost}";
         }
     }
 }
