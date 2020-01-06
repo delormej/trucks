@@ -20,11 +20,18 @@ namespace Trucks
 
         public List<FuelCharge> FuelCharges { get { return _charges; }}
 
-        public double GetFuelCharges(int week, int truckId)
+        public double GetFuelCharges(int year, int week, int truckId)
         {
             double fuel = 0.0;
             string truck = truckId.ToString();
-            IEnumerable<FuelCharge> charges = GetFuelCharges(week).Where(f => f.TruckId == truck);
+            IEnumerable<FuelCharge> charges = null;
+            var task = Task.Run( async () => {
+                charges = await GetFuelChargesAsync(year, week);
+                if (charges != null)
+                    charges = charges.Where(f => f.TruckId == truck);
+            });
+            task.Wait();
+
             if (charges?.Count() > 0)
                 fuel = charges.Sum(c => c.NetCost);
             
@@ -36,12 +43,34 @@ namespace Trucks
             return fuel;
         }
 
-        public IEnumerable<FuelCharge> GetFuelCharges(int week)
+        private async Task<IEnumerable<FuelCharge>> GetFuelChargesAsync(int year, int week)
         {
             if (_charges == null)
-                throw new ApplicationException("No fuel charges available.");
-            
-            return _charges.Where(c => c.Week == week);
+            {
+                _charges = new List<FuelCharge>();
+                using (CosmosClient cosmosClient = GetCosmosClient())
+                {
+                    try 
+                    {
+                        string sqlQueryText = $"SELECT * FROM FuelCharge c";
+                        sqlQueryText += $" WHERE c.Year = {year} AND c.WeekNumber IN ({week})";
+
+                        Container container = cosmosClient.GetContainer(databaseId, "FuelCharge");
+                        QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
+                        
+                        await foreach (FuelCharge item in 
+                            container.GetItemQueryIterator<FuelCharge>(queryDefinition))
+                                _charges.Add(item);
+                    }
+                    catch (Exception e)
+                    {
+                        System.Console.WriteLine($"Error occurred while retrieving FuelCharge for week: {week}:\n\t" +
+                            e.Message);
+                        return null;
+                    }
+                }   
+            }
+            return _charges;
         }
 
         /// <summary>

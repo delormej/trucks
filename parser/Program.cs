@@ -49,12 +49,7 @@ namespace Trucks
                     int week = int.Parse(args[2]);
                     int truck;
                     if (args.Length > 3 && int.TryParse(args[3], out truck))
-                    {
-                        if (args.Length > 4)
-                            CreateSettlementStatement(year, week, truck, args[4]);
-                        else
-                            CreateSettlementStatement(year, week, truck);
-                    }
+                        CreateSettlementStatement(year, week, truck);
                     else
                         CreateSettlementStatement(year, week);
                 }
@@ -210,8 +205,7 @@ namespace Trucks
             return settlementsToConvert;
         }
 
-        private static void CreateSettlementStatement(int year, int week, 
-                int? truckid = null, string fuelCsv = null)
+        private static void CreateSettlementStatement(int year, int week, int? truckid = null)
         {
             System.Console.WriteLine($"Creating settlements {year}/{week} {truckid?.ToString()}");
            
@@ -219,15 +213,9 @@ namespace Trucks
             {
                 int[] weeks = new int[] { week };
                 
-                FuelChargeRepository fuelRepository = null;
-                if (fuelCsv != null)
-                {
-                    fuelRepository = new FuelChargeRepository();
-                    fuelRepository.Load(fuelCsv);
-                }
-
-                SettlementRepository repository = new SettlementRepository();    
-                List<SettlementHistory> settlements = await repository.GetSettlementsByWeekAsync(year, weeks);
+                FuelChargeRepository fuelRepository = new FuelChargeRepository();
+                SettlementRepository settlementRepository = new SettlementRepository();    
+                List<SettlementHistory> settlements = await settlementRepository.GetSettlementsByWeekAsync(year, weeks);
                 if (settlements.Count() > 0)
                 {
                     SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements, fuelRepository);
@@ -299,7 +287,7 @@ namespace Trucks
             System.Console.WriteLine($"Saving {file} fuel charges to database.");
             FuelChargeRepository repository = new FuelChargeRepository();
             repository.Load(file);
-            // repository.EnsureDatabaseAsync().Wait();
+            repository.EnsureDatabaseAsync().Wait();
             System.Console.WriteLine($"Found {repository.FuelCharges.Count()} charges.");
             var task = Task.Run(() => repository.SaveAsync());
             task.Wait();

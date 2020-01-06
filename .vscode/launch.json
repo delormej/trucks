@@ -14,7 +14,8 @@
             "program": "${workspaceFolder}/parser/bin/Debug/netcoreapp3.1/parser.dll",
             //"args": ["settlement", "2019", "47", "13357", "../fuelparser/fuelreport.csv"],
             //"args": ["fixtemplate",  "/Users/jasondel/dev/trucks/parser/Excel/template.xlsx"],
-            "args": ["savefuel", "/Users/jasondel/dev/trucks/fuelparser/fuelreport.csv"],
+            //"args": ["savefuel", "/Users/jasondel/dev/trucks/fuelparser/fuelreport.csv"],
+            "args": ["settlement", "2019", "51"],
             "cwd": "${workspaceFolder}/parser",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",

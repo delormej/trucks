@@ -7,7 +7,9 @@ namespace Trucks
     {
         private string _id;
         private int _week;
-
+        private int _year;
+        private string _transactionDate;
+        
         public FuelCharge() {}
 
         public virtual string id 
@@ -20,29 +22,31 @@ namespace Trucks
             set { _id = value; }
         }
 
-        public int Week 
+        public int WeekNumber 
         {
-            get 
-            {
-                if (TransactionDate != null)
-                {
-                    int week, year;
-                    Tools.GetWeekNumber(DateTime.Parse(TransactionDate), out week, out year);
-                    return week;
-                }
-                else
-                {
-                    return default(int);
-                }
-            }
-            set { _week = value; } // Really shouldn't have a set implementation, but seems to need to be here for serialization to work.
+            get { return _week; }
+            set { _week = value; } 
         }
 
+        public int Year 
+        {
+            get { return _year; }
+            set { _year = value; } 
+        }        
+
         [JsonProperty("Transaction_Date")]
-        public string TransactionDate { get; set; }
+        public string TransactionDate
+        {
+            get { return _transactionDate; } 
+            set
+            {
+                _transactionDate = value;
+                Tools.GetWeekNumber(DateTime.Parse(_transactionDate), out _week, out _year);
+            }
+        }
         
         [JsonProperty("Transaction_Time")]
-        public string TransactionTime { get; set; }
+        public string TransactionTime  { get; set; }
 
         [JsonProperty("Net_Cost")]
         public double NetCost { get; set; }

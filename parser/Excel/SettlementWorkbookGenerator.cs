@@ -63,7 +63,7 @@ namespace Trucks
                     bool ignoreComchek = false;
                     if (_fuelRepository != null)
                     {
-                        double fuel = _fuelRepository.GetFuelCharges(week, truck);
+                        double fuel = _fuelRepository.GetFuelCharges(year, week, truck);
                         if (fuel > 0)
                         {
                             workbook.AddFuelCharge(fuel);
