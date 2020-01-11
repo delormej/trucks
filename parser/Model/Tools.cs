@@ -23,14 +23,14 @@ namespace Trucks
             int actualWeek = CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(
                 settlementDate, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
 
-            if (actualWeek > 50)
+            if (actualWeek > 51)
             {
-                week = actualWeek + 2 - 52;
+                week = actualWeek + 1 - 52;
                 year = settlementDate.Year + 1;
             }
             else
             {
-                week = actualWeek + 2;
+                week = actualWeek + 1;
                 year = settlementDate.Year;
             }
         }
