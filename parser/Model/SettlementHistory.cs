@@ -22,8 +22,8 @@ namespace Trucks
                 this.Year = year;
             }
         }
-        public int WeekNumber { get; set; }
-        public int Year { get; set; }
+        public int WeekNumber { get; private set; }
+        public int Year { get; private set; }
         public int CompanyId { get; set; } 
         public double CheckAmount { get; set; }
         public double ARAmount { get; set; }

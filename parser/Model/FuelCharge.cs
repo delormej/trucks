@@ -6,8 +6,6 @@ namespace Trucks
     public class FuelCharge
     {
         private string _id;
-        private int _week;
-        private int _year;
         private string _transactionDate;
         
         public FuelCharge() {}
@@ -24,24 +22,27 @@ namespace Trucks
 
         public int WeekNumber 
         {
-            get { return _week; }
-            set { _week = value; } 
+            get;
+            private set; 
         }
 
         public int Year 
         {
-            get { return _year; }
-            set { _year = value; } 
+            get;
+            private set;
         }        
 
         [JsonProperty("Transaction_Date")]
         public string TransactionDate
         {
-            get { return _transactionDate; } 
+            get { return _transactionDate; }
             set
             {
                 _transactionDate = value;
-                Tools.GetWeekNumber(DateTime.Parse(_transactionDate), out _week, out _year);
+                int week, year;
+                Tools.GetWeekNumber(DateTime.Parse(_transactionDate), out week, out year);
+                this.WeekNumber = week;
+                this.Year = year;
             }
         }
         
