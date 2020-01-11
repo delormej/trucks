@@ -60,7 +60,11 @@ namespace Trucks
                 else if (command == "savefuel")
                 {
                     SaveFuelCharges(args[1]);
-                }                
+                }       
+                else if (command == "get")
+                {
+                    PrintSettlementHeader(args[1], args[2]);
+                }         
             }
         }
 
@@ -290,6 +294,26 @@ namespace Trucks
             System.Console.WriteLine($"Found {repository.FuelCharges.Count()} charges.");
             var task = Task.Run(() => repository.SaveAsync());
             task.Wait();
+        }
+
+        private static void PrintSettlementHeader(string settlementId, string companyId)
+        {
+            System.Console.WriteLine($"Querying for {settlementId} in company: {companyId}");
+
+            SettlementHistory settlement = null;
+            Task.Run( async () => {
+                SettlementRepository repo = new SettlementRepository();
+                settlement = await repo.GetSettlementAsync(settlementId, companyId);
+            }).Wait();
+
+            if (settlement != null)
+            {
+                System.Console.WriteLine($"{settlement.id}, {settlement.SettlementDate}, {settlement.WeekNumber}");
+            }
+            else
+            {
+                System.Console.WriteLine("Settlement not found");
+            }
         }
 
         private static void ShowUsage(string[] args)

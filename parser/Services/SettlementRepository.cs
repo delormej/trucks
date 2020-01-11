@@ -155,6 +155,21 @@ namespace Trucks
             }
         }
 
+        public async Task<SettlementHistory> GetSettlementAsync(string settlementId, string companyId)
+        {
+            using (var cosmosClient = GetCosmosClient())
+            {
+                Container container = cosmosClient.GetContainer(databaseId, 
+                    typeof(SettlementHistory).Name);
+                
+                SettlementHistory settlement = 
+                    await container.ReadItemAsync<SettlementHistory>(settlementId, 
+                        new PartitionKey(double.Parse(companyId)));
+                
+                return settlement;
+            }
+        }
+
         private async Task DeleteSettlementAsync(CosmosClient cosmosClient, SettlementHistory settlement)
         {
             Container container = cosmosClient.GetContainer(databaseId, typeof(SettlementHistory).Name);
