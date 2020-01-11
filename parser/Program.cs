@@ -223,7 +223,6 @@ namespace Trucks
                     foreach (int truck in trucks)
                     {
                         string file = generator.Generate(year, weeks, truck);
-                        System.Console.WriteLine($"Created {file}.");
                     }
                 }
                 else

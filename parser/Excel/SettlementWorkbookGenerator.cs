@@ -61,14 +61,11 @@ namespace Trucks
                     //
                     #warning FIX THIS: Need to get Comchek flag from Driver.
                     bool ignoreComchek = false;
-                    if (_fuelRepository != null)
+                    double fuel = _fuelRepository.GetFuelCharges(year, week, truck);
+                    if (fuel > 0)
                     {
-                        double fuel = _fuelRepository.GetFuelCharges(year, week, truck);
-                        if (fuel > 0)
-                        {
-                            workbook.AddFuelCharge(fuel);
-                            ignoreComchek = true;
-                        }
+                        workbook.AddFuelCharge(fuel);
+                        ignoreComchek = true;
                     }
 
                     workbook.AddCredits(credits, ignoreComchek);                    
@@ -78,6 +75,8 @@ namespace Trucks
                         workbook.AddOccupationalInsurance(occInsurance);
                         
                     workbook.Save();
+
+                    System.Console.WriteLine($"Created {outputFile} with {credits.Count()} credit(s), ${fuel.ToString("0.00")} in fuel from {settlement.id}:{settlement.SettlementDate.ToString("yyyy-MM-dd")} for company {settlement.CompanyId}.");
                 }
             }
             catch (Exception e)
