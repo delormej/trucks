@@ -49,9 +49,13 @@ namespace Trucks
                     int week = int.Parse(args[2]);
                     int truck;
                     if (args.Length > 3 && int.TryParse(args[3], out truck))
-                        CreateSettlementStatement(year, week, truck);
+                        CreateSettlementStatement(year, new int[] { week }, truck);
                     else
-                        CreateSettlementStatement(year, week);
+                        CreateSettlementStatement(year, new int[] { week });
+                }
+                else if (command == "year")
+                {
+                    CreateSettlementsForYear(int.Parse(args[1]));
                 }
                 else if (command == "fixtemplate")
                 {
@@ -209,14 +213,18 @@ namespace Trucks
             return settlementsToConvert;
         }
 
-        private static void CreateSettlementStatement(int year, int week, int? truckid = null)
+        private static void CreateSettlementsForYear(int year)
         {
-            System.Console.WriteLine($"Creating settlements {year}/{week} {truckid?.ToString()}");
+            int[] weeks = Enumerable.Range(1, 52).ToArray();
+            CreateSettlementStatement(year, weeks);            
+        }
+
+        private static void CreateSettlementStatement(int year, int[] weeks, int? truckid = null)
+        {
+            System.Console.WriteLine($"Creating settlements {year}/{weeks[0]} {truckid?.ToString()}");
            
             Task.Run( async () => 
-            {
-                int[] weeks = new int[] { week };
-                
+            {   
                 FuelChargeRepository fuelRepository = new FuelChargeRepository();
                 SettlementRepository settlementRepository = new SettlementRepository();    
                 List<SettlementHistory> settlements = await settlementRepository.GetSettlementsByWeekAsync(year, weeks);
