@@ -82,7 +82,10 @@ namespace Trucks
 
         protected CosmosClient GetCosmosClient()
         {
-            return new CosmosClient(endpointUrl, authorizationKey);
+            CosmosClientOptions options = new CosmosClientOptions();
+            options.MaxRetryAttemptsOnRateLimitedRequests = 9;
+            CosmosClient client = new CosmosClient(endpointUrl, authorizationKey, options);
+            return client;
         }
 
         protected void SetThroughput(CosmosClient cosmosClient, int throughput)

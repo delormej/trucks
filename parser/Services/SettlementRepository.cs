@@ -60,7 +60,7 @@ namespace Trucks
         {
             using (CosmosClient cosmosClient = GetCosmosClient())
             {
-                SetThroughput(cosmosClient, 10000);
+                // SetThroughput(cosmosClient, 10000);
                 foreach (SettlementHistory settlement in settlements)
                 {
                     try
@@ -78,7 +78,7 @@ namespace Trucks
                             $"Error atempting to save settlement: {settlement.id} to database.\n\t{e.Message}");
                     }
                 }
-                SetThroughput(cosmosClient, 400);
+                // SetThroughput(cosmosClient, 400);
             }
         }
 
