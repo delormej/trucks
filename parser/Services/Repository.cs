@@ -11,7 +11,7 @@ namespace Trucks
     {
         private const string endpointUrl = "https://trucksdb.documents.azure.com:443/";
         private string authorizationKey = Environment.GetEnvironmentVariable("TRUCKDBKEY");
-        protected const string databaseId = "trucks";
+        protected string databaseId = "trucksdb";
 
         public Repository()
         {
