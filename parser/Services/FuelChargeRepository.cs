@@ -12,70 +12,54 @@ namespace Trucks
 {
     public class FuelChargeRepository : Repository
     {
-        List<FuelCharge> _charges;
-
         public FuelChargeRepository()
         {
         }
 
-        public List<FuelCharge> FuelCharges { get { return _charges; }}
-
         public double GetFuelCharges(int year, int week, int truckId)
         {
-            double fuel = 0.0;
             string truck = truckId.ToString();
-            IEnumerable<FuelCharge> charges = null;
-            var task = Task.Run( async () => {
-                charges = await GetFuelChargesAsync(year, week);
-                if (charges != null)
-                    charges = charges.Where(f => f.TruckId == truck);
-            });
-            task.Wait();
+         
+            List<FuelCharge> charges = null;
+            Task.Run( async () => {
+                charges = await GetFuelChargesAsync(year, week, truckId);
+            }).Wait();
 
+            double fuel = 0.0;
             if (charges?.Count() > 0)
                 fuel = charges.Sum(c => c.NetCost);
             
             return fuel;
         }
 
-        private async Task<IEnumerable<FuelCharge>> GetFuelChargesAsync(int year, int week)
+        private async Task<List<FuelCharge>> GetFuelChargesAsync(int year, int week, int truckId)
         {
-            if (_charges == null)
-            {
-                _charges = new List<FuelCharge>();
-                using (CosmosClient cosmosClient = GetCosmosClient())
-                {
-                    try 
-                    {
-                        string sqlQueryText = $"SELECT * FROM FuelCharge c";
-                        sqlQueryText += $" WHERE c.Year = {year} AND c.WeekNumber IN ({week})";
+            string sqlQueryText = $"SELECT * FROM FuelCharge c";
+            sqlQueryText += $" WHERE c.Emboss_Line_2 = '{truckId.ToString()}' AND c.Year = {year} AND c.WeekNumber = {week}";
+            
+            List<FuelCharge> charges = new List<FuelCharge>();
 
-                        Container container = cosmosClient.GetContainer(databaseId, "FuelCharge");
-                        QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
-                        
-                        await foreach (FuelCharge item in 
-                            container.GetItemQueryIterator<FuelCharge>(queryDefinition))
-                                _charges.Add(item);
-                    }
-                    catch (Exception e)
-                    {
-                        System.Console.WriteLine($"Error occurred while retrieving FuelCharge for week: {week}:\n\t" +
-                            e.Message);
-                        return null;
-                    }
-                }   
+            using (CosmosClient cosmosClient = GetCosmosClient())
+            {
+                Container container = cosmosClient.GetContainer(databaseId, "FuelCharge");
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
+                
+                await foreach (FuelCharge item in 
+                    container.GetItemQueryIterator<FuelCharge>(queryDefinition))
+                        charges.Add(item);
             }
-            return _charges;
+            
+            return charges;
         }
 
         /// <summary>
         /// Persists all charges to backing datastore.
         /// </summary>
-        public void SaveAsync()
+        public void SaveAsync(IEnumerable<FuelCharge> charges)
         {
             using (CosmosClient cosmos = GetCosmosClient())
             {
-                foreach (FuelCharge charge in _charges)
+                foreach (FuelCharge charge in charges)
                 {
                     try
                     {
@@ -90,7 +74,7 @@ namespace Trucks
             }
         }
 
-        public void Load(string filename)
+        public IEnumerable<FuelCharge> Load(string filename)
         {
             string csv = File.ReadAllText(filename);
             StringBuilder sb = new StringBuilder();
@@ -102,7 +86,7 @@ namespace Trucks
                     w.Write(p);
             }
 
-            _charges = JsonConvert.DeserializeObject<List<FuelCharge>>(sb.ToString());
+            return JsonConvert.DeserializeObject<List<FuelCharge>>(sb.ToString());
         }
     }
 }

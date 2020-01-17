@@ -16,6 +16,12 @@ namespace Trucks
 
         public string TemplateFile = "Excel/template.xlsx";
 
+        public int Truck 
+        {
+            get { return _truck; }
+            set { _truck = value; }
+        }
+
         public SettlementWorkbook(int year, int truck, string driver, DateTime settlementDate)
         {
             _truck = truck;
@@ -79,7 +85,7 @@ namespace Trucks
         /// </summary>
         public void AddFuelCharge(double fuel)
         {
-            if (fuel == default(double))
+            if (fuel <= 0.0)
                 return;
             
             _lastLoadRow = 6;

@@ -230,11 +230,13 @@ namespace Trucks
                 List<SettlementHistory> settlements = await settlementRepository.GetSettlementsByWeekAsync(year, weeks);
                 if (settlements.Count() > 0)
                 {
+                    if (truckid != null)
+                        settlements = FilterSettlementsByTruck(settlements, (int)truckid).ToList();
+
                     SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements, fuelRepository);
-                    int[] trucks = (truckid == null) ? GetTrucks(settlements) : new int[] { (int)truckid };
-                    foreach (int truck in trucks)
+                    foreach (string driver in GetDrivers(settlements, truckid))
                     {
-                        string file = generator.Generate(year, weeks, truck);
+                        string file = generator.Generate(year, weeks, driver);
                     }
                 }
                 else
@@ -245,6 +247,14 @@ namespace Trucks
             ).Wait();
         }
 
+        private static IEnumerable<SettlementHistory> FilterSettlementsByTruck(
+                IEnumerable<SettlementHistory> settlements, int truckid)
+        {
+            return settlements.Where(
+                        s => s.Credits.Where(c => c.TruckId == truckid).Count() > 0
+                    );
+        }
+
         private static int[] GetTrucks(List<SettlementHistory> settlements)
         {
             List<int> trucks = new List<int>();
@@ -252,6 +262,15 @@ namespace Trucks
                 trucks.AddRange(s.Credits.Select(c => c.TruckId).Where(t => t > 0));
 
             return trucks.Distinct().ToArray();
+        }
+
+        private static IEnumerable<string> GetDrivers(List<SettlementHistory> settlements, int? truckid)
+        {
+            IEnumerable<string> drivers = settlements.SelectMany(s => 
+                    s.Credits.Where(c => truckid != null ? c.TruckId == truckid : true)
+                    .Select(c => c.Driver)).Distinct();                
+            
+            return drivers;
         }
 
         private static void ConsolidateSettlements()
@@ -297,10 +316,9 @@ namespace Trucks
         {
             System.Console.WriteLine($"Saving {file} fuel charges to database.");
             FuelChargeRepository repository = new FuelChargeRepository();
-            repository.Load(file);
+            IEnumerable<FuelCharge> charges = repository.Load(file);
             repository.EnsureDatabaseAsync().Wait();
-            System.Console.WriteLine($"Found {repository.FuelCharges.Count()} charges.");
-            var task = Task.Run(() => repository.SaveAsync());
+            var task = Task.Run(() => repository.SaveAsync(charges));
             task.Wait();
         }
 

@@ -18,7 +18,7 @@ namespace Trucks
             this._fuelRepository = fuelRepository;
         }
 
-        public string Generate(int year, int[] weeks, int truck)
+        public string Generate(int year, int[] weeks, string driver)
         {
             string outputFile = null;
             SettlementWorkbook workbook = null;
@@ -27,23 +27,20 @@ namespace Trucks
             {
                 foreach (int week in weeks)
                 {
-                    SettlementHistory settlement = GetSettlement(week, truck);
+                    SettlementHistory settlement = GetSettlement(week, driver);
                     if (settlement == null)
                     {
-                        System.Console.WriteLine($"No settlement found for truck {truck} on week {week}.");
+                        System.Console.WriteLine($"No settlement found for {driver} on week {week}.");
                         continue;
                     }
+                    int truck = GetTruckForDriver(settlement, driver);
                     IEnumerable<Deduction> deductions = settlement.Deductions.Where(d => d.TruckId == truck);
                     IEnumerable<Credit> credits = settlement.Credits.Where(c => c.TruckId == truck);
 
                     if (workbook == null)
                     {
-                        string driver = GetDriver(credits);
-                        if (driver != null)
-                        {
-                            workbook = new SettlementWorkbook(year, truck, driver, settlement.SettlementDate);
-                            outputFile = workbook.Create();
-                        }
+                        workbook = new SettlementWorkbook(year, truck, driver, settlement.SettlementDate);
+                        outputFile = workbook.Create();
                     }
                     if (workbook == null)
                     {
@@ -51,6 +48,8 @@ namespace Trucks
                         continue;
                     }
 
+                    if (workbook.Truck != truck)
+                        workbook.Truck = truck; 
                     workbook.AddSheet(week);
                     workbook.AddSettlementId(settlement.SettlementId);
 
@@ -100,12 +99,22 @@ namespace Trucks
             return driver;
         }
 
-        private SettlementHistory GetSettlement(int week, int truck)
+        private SettlementHistory GetSettlement(int week, string driver)
         {
             return _settlements.Where(
                         s => s.WeekNumber == week 
-                        && s.Credits.Where(c => c.TruckId == truck).Count() > 0
+                        && s.Credits.Where(c => c.Driver == driver).Count() > 0
                     ).FirstOrDefault();            
+        }
+
+        private int GetTruckForDriver(SettlementHistory settlement, string driver)
+        {
+            var credit = settlement.Credits.Where(c => c.Driver == driver)
+                .FirstOrDefault();
+            if (credit != null)
+                return credit.TruckId;
+            else
+                throw new ApplicationException($"Unable to find a truckid for driver {driver} in settlement {settlement.id}");
         }
 
         private double GetOccupationalInsurance(IEnumerable<Deduction> deductions)
