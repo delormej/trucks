@@ -225,7 +225,7 @@ namespace Trucks
            
             Task.Run( async () => 
             {   
-                FuelChargeRepository fuelRepository = new FuelChargeRepository();
+                FuelChargeRepository fuelRepository = new FuelChargeRepository(year, weeks);
                 SettlementRepository settlementRepository = new SettlementRepository();    
                 List<SettlementHistory> settlements = await settlementRepository.GetSettlementsByWeekAsync(year, weeks);
                 if (settlements.Count() > 0)
@@ -316,10 +316,14 @@ namespace Trucks
         {
             System.Console.WriteLine($"Saving {file} fuel charges to database.");
             FuelChargeRepository repository = new FuelChargeRepository();
-            IEnumerable<FuelCharge> charges = repository.Load(file);
-            repository.EnsureDatabaseAsync().Wait();
-            var task = Task.Run(() => repository.SaveAsync(charges));
-            task.Wait();
+
+            var loadTask = repository.LoadAsync(file);
+            Task.Run( async () => {
+                await repository.EnsureDatabaseAsync();
+                await loadTask;
+                repository.SaveAsync(repository.Charges);
+                System.Console.WriteLine($"Saved {repository.Charges?.Count()} charge(s).");
+            }).Wait();
         }
 
         private static void PrintSettlementHeader(string settlementId, string companyId)
