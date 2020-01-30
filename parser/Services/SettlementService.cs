@@ -98,9 +98,10 @@ namespace Trucks
         }
 
         /// <summary>
-        /// Returns all settlements from panther that we have not saved.
+        /// Downloads and returns 'max' settlements from panther that we have not persisted, ordered by
+        /// descending date.
         /// <summary>
-        public async Task<List<SettlementHistory>> GetMissingSettlements(string company, string pantherPassword, int max = 10)
+        public async Task<List<SettlementHistory>> DownloadMissingSettlements(string company, string pantherPassword, int max = 10)
         {
             PantherClient panther = new PantherClient(company, pantherPassword);
             List<SettlementHistory> settlements = await panther.GetSettlementsAsync();

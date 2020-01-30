@@ -20,6 +20,16 @@ namespace Trucks
         HttpClientHandler clientHandler;
         HttpClient client;
 
+        public static string GetLocalFileName(SettlementHistory settlement)
+        {
+            return GetLocalFileName(settlement.CompanyId.ToString(), settlement.SettlementId);   
+        }
+
+        private static string GetLocalFileName(string companyId, string settlementId)
+        {
+            return Path.Combine(companyId, settlementId + ".xls");
+        }
+
         public PantherClient(string company, string password)
         {
             this.company = company;
@@ -89,7 +99,7 @@ namespace Trucks
             Directory.CreateDirectory(company);
             string uri = pantherBaseUrl + $"/Financial/DownloadSettlementReport?ChkNo={checkNumber}";
             byte[] bytes = await client.GetByteArrayAsync(uri);
-            string filename = Path.Join(company, $"{checkNumber}.xls");
+            string filename = GetLocalFileName(company, checkNumber);
             File.WriteAllBytes(filename, bytes);
             return filename;
         }
@@ -132,9 +142,7 @@ namespace Trucks
 
         private bool Exists(SettlementHistory settlement)
         {
-            string filename = Path.Combine(settlement.CompanyId.ToString(), 
-                settlement.SettlementId + ".xls");
-            return File.Exists(filename);
+            return File.Exists(GetLocalFileName(settlement));
         }        
     }
 }

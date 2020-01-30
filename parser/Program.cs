@@ -146,7 +146,7 @@ namespace Trucks
             var task = Task.Run(async () => 
             {
                 List<SettlementHistory> settlementsToConvert = 
-                    await settlementService.GetMissingSettlements(company, pantherPassword);
+                    await settlementService.DownloadMissingSettlements(company, pantherPassword);
                 
                 if (settlementsToConvert != null)
                 {
