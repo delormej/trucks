@@ -52,14 +52,13 @@ namespace Trucks
             return files.ToArray();
         }
 
-        public string[] UpdateHeadersFromPanther(string company, string pantherPassword)
+        public string[] UpdateHeadersFromPanther(PantherClient panther)
         {
-            System.Console.WriteLine($"Updating settlements for company: {company}.");
+            System.Console.WriteLine($"Updating settlements for company: {panther.Company}.");
             List<SettlementHistory> settlementsToUpdate = null;
 
             var task = Task.Run(async () => 
             {
-                PantherClient panther = new PantherClient(company, pantherPassword);
                 List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
 
                 SettlementRepository repository = new SettlementRepository();
@@ -101,9 +100,8 @@ namespace Trucks
         /// Downloads and returns 'max' settlements from panther that we have not persisted, ordered by
         /// descending date.
         /// <summary>
-        public async Task<List<SettlementHistory>> DownloadMissingSettlements(string company, string pantherPassword, int max = 10)
+        public async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadMissingSettlements(PantherClient panther, int max = 10)
         {
-            PantherClient panther = new PantherClient(company, pantherPassword);
             List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
 
             SettlementRepository repository = new SettlementRepository();
@@ -115,7 +113,7 @@ namespace Trucks
                 .Take(max)
                 .ToList();
 
-            List<SettlementHistory> settlementsToConvert = 
+            List<KeyValuePair<string, SettlementHistory>> settlementsToConvert = 
                 await panther.DownloadSettlementsAsync(settlementsToDownload);
 
             return settlementsToConvert;

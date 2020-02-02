@@ -8,119 +8,81 @@ namespace Trucks
 {
     class ConversionOrchestrator
     {
-        Queue<SettlementHistory> queue;
         ExcelConverter converter;
-        List<Timer> jobs;
-
         Dictionary<int, SettlementHistory> pendingDownload;
-
-        SettlementRepository repository;                
-
-        // 1. Create orchestrator with list of downloaded files.
-        // 2. Upload xls to converter
-        //      [Restrict 20 uploads at a time]
-        // 3. Track upload job periodically (every 5 min?)
-        //      [Resume uploads when the active count of conversion is <20]
-        // 4. Download converted xlsx
-        // 5. Parse xlsx 
-        // 6. Persist data to database
-
-        public ConversionOrchestrator(List<SettlementHistory> settlements, string apiKey)
+        
+        public ConversionOrchestrator(ExcelConverter converter)
         {
-            queue = new Queue<SettlementHistory>(settlements);
-            converter = new ExcelConverter(apiKey);
-            jobs = new List<Timer>();
-
-            pendingDownload = new Dictionary<int, SettlementHistory>();
-            repository = new SettlementRepository();
-        }
-
-        public async Task StartAsync(int maxUploadCount = 20)
-        {
-            await UploadBatchAsync(maxUploadCount);
-
-            // Wait until the queue is empty.
-            // await Task.Run( () => {
-            //     while (pendingDownload.Count > 0);
-            // });
-        }
-
-        private async Task UploadBatchAsync(int maxUploadCount = 20)
-        {
-            foreach (SettlementHistory settlement in queue)
-            {
-                System.Console.WriteLine($"Uploading settlement: {settlement.SettlementId}");
-                var result = await converter.UploadAsync(GetLocalFilename(settlement));
-                
-                // ScheduleJob(result.id, settlement);
-                // pendingDownload.Add(result.id, settlement);
-            }
-        }
-
-        private void ScheduleJob(int jobId, SettlementHistory settlement)
-        {
-            JobStatus job = new JobStatus(jobId, settlement);
-            const int checkDelayMs = 60 * 1000;
-
-            jobs.Add(
-                new Timer(DownloadIfReady, job, checkDelayMs, Timeout.Infinite)
-            );
+            this.converter = converter;
         }
 
         /// <summary>
-        /// Returns the local file name of a settlement history item.
+        /// Downloads settlements from panther, uploads to converter, and puts on a queue to be checked later.
         /// </summary>
-        private string GetLocalFilename(SettlementHistory item)
+        public async Task StartAsync(SettlementService settlementService, PantherClient panther, int max = 10)
         {
-            return Path.Join(item.CompanyId.ToString(), item.SettlementId + ".xls");
+            System.Console.WriteLine("Downloading settlements from panther and uploading to conversion service.");
+
+            List<KeyValuePair<string, SettlementHistory>> downloads = 
+                await settlementService.DownloadMissingSettlements(panther, max);
+            
+            foreach (var download in downloads)
+            {
+                string filename = download.Key;
+
+                ConversionJob job = new ConversionJob();
+                job.Result = await converter.UploadAsync(filename);
+                job.Company = download.Value.CompanyId.ToString();
+                job.SettlementId = download.Value.SettlementId;
+                job.SettlementDate = download.Value.SettlementDate;
+             
+                QueueUploaded(job);
+            }
         }
 
-        private void DownloadIfReady(Object stateInfo)
+        private async Task SaveAsync(ConversionJob job, SettlementRepository repository)
         {
-            JobStatus job = (JobStatus)stateInfo;
-            var task = converter.QueryAsync(job.JobId);
-            task.Wait();
-            ZamzarResult result = task.Result;
+            if (job.Result == null)
+                throw new ApplicationException("Null ZamzarResult in job object, cannot attempt download.");
 
+            int jobId = job.Result.id;
+            ZamzarResult result = await converter.QueryAsync(jobId);
             if (result.status == "failed")
             {
-                System.Console.WriteLine($"Failed to convert {job.Item.SettlementId}");
-                pendingDownload.Remove(job.JobId);
+                System.Console.WriteLine($"Failed to convert {job.Result.id}");
+                pendingDownload.Remove(jobId);
             }
             else if (result.status == "successful")
             {
-                // queue download, then save to db
-                string convertedFile = job.Item.SettlementId + ".xslx";
-                var download = converter.DownloadAsync(job.JobId, convertedFile);
-                download.Wait();
-                pendingDownload.Remove(job.JobId);
-                SettlementHistoryParser parser = new SettlementHistoryParser(convertedFile, job.Item.SettlementId);
+                string convertedFile = job.SettlementId + ".xslx";
+                await converter.DownloadAsync(jobId, convertedFile);
+
+                SettlementHistoryParser parser = new SettlementHistoryParser(convertedFile, job.SettlementId);
                 SettlementHistory settlement = parser.Parse();
                 
                 if (settlement != null)
                 {
-                    Task.Run( async () => {
-                        await repository.SaveSettlementHistoryAsync(settlement);
-                    });
+                    settlement.SettlementDate = job.SettlementDate;
+                    settlement.SettlementId = job.SettlementId;
+                    settlement.CompanyId = int.Parse(job.Company);                    
+                    await repository.SaveSettlementHistoryAsync(settlement);
+                    pendingDownload.Remove(jobId);
                 }
             }
-            else
-            {
-                // check again at some interval
-                ScheduleJob(job.JobId, job.Item);
-            }
         }
+
+        /// <summary>
+        /// Places the result of the upload on a queue for another process to dequeue when ready.
+        /// </summary>
+        private void QueueUploaded(ConversionJob job)
+        { /* Call DAPR? */ }        
     }
 
-    public class JobStatus
+    public class ConversionJob
     {
-        public int JobId { get; set; }
-        public SettlementHistory Item { get; set; }
-
-        public JobStatus(int jobId, SettlementHistory item)
-        {
-            this.JobId = jobId;
-            this.Item = item;
-        }
+        public ZamzarResult Result { get; set; }
+        public string Company { get; set; }
+        public string SettlementId { get; set; }
+        public DateTime SettlementDate { get; set; }
     }
 }

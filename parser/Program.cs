@@ -16,8 +16,6 @@ namespace Trucks
             string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD");
             string convertApiKey = Environment.GetEnvironmentVariable("ZAMZARKEY");
 
-            SettlementService settlementService = new SettlementService();
-
             if (string.IsNullOrWhiteSpace(company) || 
                 string.IsNullOrWhiteSpace(password) || 
                 string.IsNullOrWhiteSpace(convertApiKey))
@@ -25,20 +23,25 @@ namespace Trucks
                 System.Console.WriteLine("Must set TRUCKCOMPANY, TRUCKPASSWORD, ZAMZARKEY env variables.");
                 return;
             }
+            
+            SettlementService settlementService = new SettlementService();
+            PantherClient panther = new PantherClient(company, password);
 
             if (args.Length < 1)
             {
-                DownloadAndConvert(settlementService, company, password, convertApiKey);
+                ExcelConverter converter = new ExcelConverter(convertApiKey);
+                ConversionOrchestrator orchestrator = new ConversionOrchestrator(converter);
+                orchestrator.StartAsync(settlementService, panther).Wait();
             }
             else
             {
                 string command = args[0].ToLower();
                 if (command == "uploaded")
-                    ProcessUploaded(company, password, convertApiKey);
+                    ProcessUploaded(panther, convertApiKey);
                 else if (command == "downloaded")
-                    ProcessDownloaded(company, password, convertApiKey);
+                    ProcessDownloaded(panther, convertApiKey);
                 else if (command == "update")
-                    settlementService.UpdateHeadersFromPanther(company, password);
+                    settlementService.UpdateHeadersFromPanther(panther);
                 else if (command == "updateall")
                     settlementService.UpdateAll();                    
                 else if (command == "report")
@@ -72,18 +75,17 @@ namespace Trucks
             }
         }
 
-        private static void ProcessDownloaded(string company, string pantherPassword, string convertApiKey)
+        private static void ProcessDownloaded(PantherClient panther, string convertApiKey)
         {
             System.Console.WriteLine("Processing local converted xlsx files.");
 
             List<SettlementHistory> settlementHeaders = null; 
             List<SettlementHistory> downloadedSettlements = null;
             var getSettlementHeaders = Task.Run( async () => {
-                PantherClient panther = new PantherClient(company, pantherPassword);
                 settlementHeaders = await panther.GetSettlementsAsync();
             });
             var parseLocalFiles = Task.Run( () =>
-                downloadedSettlements = SettlementHistoryParser.ParseLocalFiles(company));
+                downloadedSettlements = SettlementHistoryParser.ParseLocalFiles(panther.Company));
             Task.WaitAll(getSettlementHeaders, parseLocalFiles);
 
             if (downloadedSettlements.Count > 0)
@@ -101,7 +103,7 @@ namespace Trucks
             }
             else
             {
-                System.Console.WriteLine($"No settlements found for company {company}.");
+                System.Console.WriteLine($"No settlements found for company {panther.Company}.");
             }
         }
 
@@ -128,38 +130,11 @@ namespace Trucks
             }
         }
 
-        private static void ProcessUploaded(string company, string pantherPassword, string convertApiKey)
+        private static void ProcessUploaded(PantherClient panther, string convertApiKey)
         {
             System.Console.WriteLine("Processing files already uploaded to converter.");
-            PantherClient panther = new PantherClient(company, pantherPassword);
             ConvertedExcelFiles converted = new ConvertedExcelFiles(convertApiKey);
             converted.Process(panther);
-        }
-
-        /// <summary>
-        /// Downloads settlements from panther, converts, parses and persists to database.
-        /// </summary>
-        private static void DownloadAndConvert(SettlementService settlementService, string company, string pantherPassword, string convertApiKey, int max = 10)
-        {
-            System.Console.WriteLine("Downloading settlements from panther and uploading to conversion service.");
-
-            var task = Task.Run(async () => 
-            {
-                List<SettlementHistory> settlementsToConvert = 
-                    await settlementService.DownloadMissingSettlements(company, pantherPassword);
-                
-                if (settlementsToConvert != null)
-                {
-                    ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlementsToConvert, convertApiKey);
-                    await orchestrator.StartAsync(max);
-                }
-                else
-                {
-                    System.Console.WriteLine($"No settlements found to convert for {company}.");
-                }
-                
-            });
-            task.Wait();
         }
 
         private static int[] GetTrucks(List<SettlementHistory> settlements)
