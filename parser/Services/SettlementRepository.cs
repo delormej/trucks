@@ -20,7 +20,8 @@ namespace Trucks
                 QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
                 
                 await foreach (SettlementHistory settlement in 
-                    container.GetItemQueryIterator<SettlementHistory>(queryDefinition))
+                    container.GetItemQueryIterator<SettlementHistory>(queryDefinition, null, 
+                            new QueryRequestOptions() { PartitionKey = new PartitionKey("CompanyId") }))
                         settlements.Add(settlement);
             }
             return settlements;
