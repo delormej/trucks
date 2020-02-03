@@ -96,11 +96,36 @@ namespace Trucks
             return settlementIds;             
         }
 
+        public async Task<IEnumerable<ConversionJob>> StartConversion(PantherClient panther, ExcelConverter converter, int max = 10)
+        {
+            System.Console.WriteLine("Downloading settlements from panther and uploading to conversion service.");
+
+            List<KeyValuePair<string, SettlementHistory>> downloads = 
+                await DownloadMissingSettlements(panther, max);
+            List<ConversionJob> jobs = new List<ConversionJob>();
+            
+            foreach (var download in downloads)
+            {
+                string filename = download.Key;
+
+                ConversionJob job = new ConversionJob();
+                job.Result = await converter.UploadAsync(filename);
+                job.Company = download.Value.CompanyId.ToString();
+                job.SettlementId = download.Value.SettlementId;
+                job.SettlementDate = download.Value.SettlementDate;
+             
+                QueueUploaded(job);
+                jobs.Add(job);
+            }       
+
+            return jobs;     
+        }
+
         /// <summary>
         /// Downloads and returns 'max' settlements from panther that we have not persisted, ordered by
         /// descending date.
         /// <summary>
-        public async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadMissingSettlements(PantherClient panther, int max = 10)
+        private async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadMissingSettlements(PantherClient panther, int max = 10)
         {
             List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
 
@@ -118,6 +143,12 @@ namespace Trucks
 
             return settlementsToConvert;
         }
+
+        /// <summary>
+        /// Places the result of the upload on a queue for another process to dequeue when ready.
+        /// </summary>
+        private void QueueUploaded(ConversionJob job)
+        { /* Call DAPR? */ }                
 
         private IEnumerable<SettlementHistory> FilterSettlementsByTruck(
                 IEnumerable<SettlementHistory> settlements, int truckid)

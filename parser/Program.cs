@@ -30,8 +30,7 @@ namespace Trucks
             if (args.Length < 1)
             {
                 ExcelConverter converter = new ExcelConverter(convertApiKey);
-                ConversionOrchestrator orchestrator = new ConversionOrchestrator(converter);
-                orchestrator.StartAsync(settlementService, panther).Wait();
+                Process(settlementService, converter, panther);
             }
             else
             {
@@ -128,6 +127,15 @@ namespace Trucks
                     System.Console.WriteLine($"No match while merging settlement {downloadedSettlement.SettlementId}");
                 }
             }
+        }
+
+        private static void Process(SettlementService settlementService, ExcelConverter converter, PantherClient panther)
+        {
+            var conversionTask = Task<IEnumerable<ConversionJob>>.Run( () =>
+                settlementService.StartConversion(panther, converter));
+            conversionTask.Wait();
+            foreach(var result in conversionTask.Result)
+                System.Console.WriteLine($"Settlement {result.SettlementId} uploaded for conversion.");
         }
 
         private static void ProcessUploaded(PantherClient panther, string convertApiKey)
