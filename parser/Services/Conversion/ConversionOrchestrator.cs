@@ -9,7 +9,6 @@ namespace Trucks
     class ConversionOrchestrator
     {
         ExcelConverter converter;
-        Dictionary<int, SettlementHistory> pendingDownload;
         
         public ConversionOrchestrator(ExcelConverter converter)
         {
@@ -40,7 +39,7 @@ namespace Trucks
             }
         }
 
-        private async Task SaveAsync(ConversionJob job, SettlementRepository repository)
+        public async Task SaveAsync(ConversionJob job, SettlementRepository repository)
         {
             if (job.Result == null)
                 throw new ApplicationException("Null ZamzarResult in job object, cannot attempt download.");
@@ -50,7 +49,7 @@ namespace Trucks
             if (result.status == "failed")
             {
                 System.Console.WriteLine($"Failed to convert {job.Result.id}");
-                pendingDownload.Remove(jobId);
+                await RemoveJobAsync(job);
             }
             else if (result.status == "successful")
             {
@@ -66,7 +65,7 @@ namespace Trucks
                     settlement.SettlementId = job.SettlementId;
                     settlement.CompanyId = int.Parse(job.Company);                    
                     await repository.SaveSettlementHistoryAsync(settlement);
-                    pendingDownload.Remove(jobId);
+                    await RemoveJobAsync(job);
                 }
             }
         }
@@ -76,6 +75,16 @@ namespace Trucks
         /// </summary>
         private void QueueUploaded(ConversionJob job)
         { /* Call DAPR? */ }        
+
+        private async Task RemoveJobAsync(ConversionJob job)
+        {
+            if (job.Result.target_files != null)
+            {
+                int fileId = job.Result.target_files[0].id;
+                System.Console.WriteLine($"Attempting to remove file id: {fileId.ToString()}");
+                await converter.DeleteAsync(fileId);
+            }            
+        }
     }
 
     public class ConversionJob
