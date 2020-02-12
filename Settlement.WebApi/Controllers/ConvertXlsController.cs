@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
+using Settlement.WebApi.BackgroundServices;
 
 namespace Settlement.WebApi.Controllers
 {
@@ -19,6 +21,7 @@ namespace Settlement.WebApi.Controllers
         [HttpGet]
         public IEnumerable<string> Get()
         {
+
             string[] empty = new string[] {"1", "2"};
             return empty;
         }
