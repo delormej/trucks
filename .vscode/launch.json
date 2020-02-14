@@ -15,7 +15,7 @@
             //"args": ["settlement", "2019", "47", "13357", "../fuelparser/fuelreport.csv"],
             //"args": ["fixtemplate",  "/Users/jasondel/dev/trucks/parser/Excel/template.xlsx"],
             //"args": ["savefuel", "/Users/jasondel/dev/trucks/fuelparser/fuelreport.csv"],
-            "args": ["settlement", "2019", "42", "13904"],
+            "args": ["settlement", "2020", "3", "14288"],
             "cwd": "${workspaceFolder}/parser",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
