@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace Trucks
 {
-    class ExcelConverter
+    public class ExcelConverter
     {
         const string endpoint = "https://api.zamzar.com";
         const string targetFormat = "xlsx";

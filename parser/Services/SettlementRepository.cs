@@ -20,7 +20,8 @@ namespace Trucks
                 QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
                 
                 await foreach (SettlementHistory settlement in 
-                    container.GetItemQueryIterator<SettlementHistory>(queryDefinition))
+                    container.GetItemQueryIterator<SettlementHistory>(queryDefinition, null, 
+                            new QueryRequestOptions() { PartitionKey = new PartitionKey("CompanyId") }))
                         settlements.Add(settlement);
             }
             return settlements;
@@ -97,35 +98,6 @@ namespace Trucks
                 throw e;
             }
         } 
-        public async Task ConsolidateSettlementsAsync()
-        {
-            using (CosmosClient cosmosClient = GetCosmosClient())
-            {
-                List<SettlementHistory> settlements = 
-                    await GetSettlementItemsAsync<SettlementHistory>(cosmosClient);
-                
-                foreach (var settlement in settlements)
-                {
-                    // settlement.Credits = 
-                    //     await GetSettlementItemsAsync<Credit>(cosmosClient, settlement.SettlementId);
-                    // settlement.Deductions = 
-                    //     await GetSettlementItemsAsync<Deduction>(cosmosClient, settlement.SettlementId);
-                    
-                    if (settlement.Credits?.Count > 0 && settlement.Deductions?.Count > 0)
-                    {
-                        //await AddItemsToContainerAsync<SettlementHistory>(cosmosClient, settlement, "SettlementHistory");
-                        
-                        //System.Console.WriteLine($"Updated settlement {settlement.SettlementId} with {settlement.Credits?.Count()} credits and {settlement.Deductions?.Count()} deducations.");
-                    }
-                    else
-                    {
-                        // Remove settlements that do not have credits or deductions.
-                        System.Console.WriteLine($"{settlement.SettlementId} has no credits/deductions.");
-                        await DeleteSettlementAsync(cosmosClient, settlement);
-                    }
-                }
-            }
-        }
 
         private async Task<List<T>> GetSettlementItemsAsync<T>(CosmosClient cosmosClient, string settlementId = null) where T : SettlementItem
         {

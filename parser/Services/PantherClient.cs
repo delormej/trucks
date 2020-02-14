@@ -17,8 +17,20 @@ namespace Trucks
         private string company;
         private string password;
 
+        public string Company { get { return company;} }
+
         HttpClientHandler clientHandler;
         HttpClient client;
+
+        public static string GetLocalFileName(SettlementHistory settlement)
+        {
+            return GetLocalFileName(settlement.CompanyId.ToString(), settlement.SettlementId);   
+        }
+
+        private static string GetLocalFileName(string companyId, string settlementId)
+        {
+            return Path.Combine(companyId, settlementId + ".xls");
+        }
 
         public PantherClient(string company, string password)
         {
@@ -29,7 +41,7 @@ namespace Trucks
             client = new HttpClient(clientHandler);
         }
     
-        public async Task<List<SettlementHistory>> DownloadSettlementsAsync(DateTime settlementDate)
+        public async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadSettlementsAsync(DateTime settlementDate)
         {
             Func<SettlementHistory, bool> filter = (s => s.SettlementDate == settlementDate);
             return await DownloadSettlementsAsync(filter);
@@ -38,13 +50,13 @@ namespace Trucks
         /// <summary>
         /// Downloads XLS (binary) settlement statements to local files in a directory for the specified company.
         /// </summary>
-        public async Task<List<SettlementHistory>> DownloadSettlementsAsync(bool overwrite = false, int max = 10)
+        public async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadSettlementsAsync(bool overwrite = false, int max = 10)
         {
             Func<SettlementHistory, bool> filter = (s => overwrite || !Exists(s));
             return await DownloadSettlementsAsync(filter);            
         }
 
-        public async Task<List<SettlementHistory>> DownloadSettlementsAsync(Func<SettlementHistory, bool> filter, int max = 10)
+        public async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadSettlementsAsync(Func<SettlementHistory, bool> filter, int max = 10)
         {
             List<SettlementHistory> settlements = await GetSettlementsAsync();
             List<SettlementHistory> selectSettlements = settlements.Where(filter)
@@ -53,18 +65,19 @@ namespace Trucks
                 .ToList();
 
             return await DownloadSettlementsAsync(selectSettlements);
-
         }
 
-        public async Task<List<SettlementHistory>> DownloadSettlementsAsync(List<SettlementHistory> settlementsToDownload)
+        public async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadSettlementsAsync(List<SettlementHistory> settlementsToDownload)
         {
+            List<KeyValuePair<string, SettlementHistory>> downloaded = new List<KeyValuePair<string, SettlementHistory>>();
             foreach (SettlementHistory settlement in settlementsToDownload)
             {
                 string xls = await DownloadSettlementReportAsync(settlement.SettlementId);
+                downloaded.Add(new KeyValuePair<string, SettlementHistory>(xls, settlement));
                 System.Console.WriteLine($"Downloaded {settlement.SettlementId}: {xls}");
             }
             
-            return settlementsToDownload;            
+            return downloaded;            
         }        
 
         public async Task<List<SettlementHistory>> GetSettlementsAsync()
@@ -89,7 +102,7 @@ namespace Trucks
             Directory.CreateDirectory(company);
             string uri = pantherBaseUrl + $"/Financial/DownloadSettlementReport?ChkNo={checkNumber}";
             byte[] bytes = await client.GetByteArrayAsync(uri);
-            string filename = Path.Join(company, $"{checkNumber}.xls");
+            string filename = GetLocalFileName(company, checkNumber);
             File.WriteAllBytes(filename, bytes);
             return filename;
         }
@@ -132,9 +145,7 @@ namespace Trucks
 
         private bool Exists(SettlementHistory settlement)
         {
-            string filename = Path.Combine(settlement.CompanyId.ToString(), 
-                settlement.SettlementId + ".xls");
-            return File.Exists(filename);
+            return File.Exists(GetLocalFileName(settlement));
         }        
     }
 }

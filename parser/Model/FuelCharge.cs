@@ -41,7 +41,9 @@ namespace Trucks
                 _transactionDate = value;
                 int week, year;
                 Tools.GetWeekNumber(DateTime.Parse(_transactionDate), out week, out year);
-                this.WeekNumber = week;
+                if (WeekNumber == 52)
+                    year++;
+                this.WeekNumber = (week+1)%52;
                 this.Year = year;
             }
         }

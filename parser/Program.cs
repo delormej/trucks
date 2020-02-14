@@ -23,24 +23,26 @@ namespace Trucks
                 System.Console.WriteLine("Must set TRUCKCOMPANY, TRUCKPASSWORD, ZAMZARKEY env variables.");
                 return;
             }
+            
+            SettlementService settlementService = new SettlementService();
+            PantherClient panther = new PantherClient(company, password);
 
             if (args.Length < 1)
             {
-                DownloadAndConvert(company, password, convertApiKey);
+                ExcelConverter converter = new ExcelConverter(convertApiKey);
+                Process(settlementService, converter, panther);
             }
             else
             {
                 string command = args[0].ToLower();
                 if (command == "uploaded")
-                    ProcessUploaded(company, password, convertApiKey);
+                    ProcessUploaded(panther, convertApiKey);
                 else if (command == "downloaded")
-                    ProcessDownloaded(company, password, convertApiKey);
+                    ProcessDownloaded(panther, convertApiKey);
                 else if (command == "update")
-                    UpdateSettlementHeaders(company, password);
+                    settlementService.UpdateHeadersFromPanther(panther);
                 else if (command == "updateall")
-                    UpdateAllSettlements();                    
-                else if (command == "consolidate")
-                    ConsolidateSettlements();
+                    settlementService.UpdateAll();                    
                 else if (command == "report")
                     GetReport();
                 else if (command == "settlement")
@@ -49,13 +51,13 @@ namespace Trucks
                     int week = int.Parse(args[2]);
                     int truck;
                     if (args.Length > 3 && int.TryParse(args[3], out truck))
-                        CreateSettlementStatement(year, new int[] { week }, truck);
+                        settlementService.CreateSettlementStatement(year, new int[] { week }, truck);
                     else
-                        CreateSettlementStatement(year, new int[] { week });
+                        settlementService.CreateSettlementStatement(year, new int[] { week });
                 }
                 else if (command == "year")
                 {
-                    CreateSettlementsForYear(int.Parse(args[1]));
+                    settlementService.CreateSettlementsForYear(int.Parse(args[1]));
                 }
                 else if (command == "fixtemplate")
                 {
@@ -72,18 +74,17 @@ namespace Trucks
             }
         }
 
-        private static void ProcessDownloaded(string company, string pantherPassword, string convertApiKey)
+        private static void ProcessDownloaded(PantherClient panther, string convertApiKey)
         {
             System.Console.WriteLine("Processing local converted xlsx files.");
 
             List<SettlementHistory> settlementHeaders = null; 
             List<SettlementHistory> downloadedSettlements = null;
             var getSettlementHeaders = Task.Run( async () => {
-                PantherClient panther = new PantherClient(company, pantherPassword);
                 settlementHeaders = await panther.GetSettlementsAsync();
             });
             var parseLocalFiles = Task.Run( () =>
-                downloadedSettlements = SettlementHistoryParser.ParseLocalFiles(company));
+                downloadedSettlements = SettlementHistoryParser.ParseLocalFiles(panther.Company));
             Task.WaitAll(getSettlementHeaders, parseLocalFiles);
 
             if (downloadedSettlements.Count > 0)
@@ -101,7 +102,7 @@ namespace Trucks
             }
             else
             {
-                System.Console.WriteLine($"No settlements found for company {company}.");
+                System.Console.WriteLine($"No settlements found for company {panther.Company}.");
             }
         }
 
@@ -128,131 +129,20 @@ namespace Trucks
             }
         }
 
-        private static void ProcessUploaded(string company, string pantherPassword, string convertApiKey)
+        private static void Process(SettlementService settlementService, ExcelConverter converter, PantherClient panther)
+        {
+            var conversionTask = Task<IEnumerable<ConversionJob>>.Run( () =>
+                settlementService.StartConversion(panther, converter));
+            conversionTask.Wait();
+            foreach(var result in conversionTask.Result)
+                System.Console.WriteLine($"Settlement {result.SettlementId} uploaded for conversion.");
+        }
+
+        private static void ProcessUploaded(PantherClient panther, string convertApiKey)
         {
             System.Console.WriteLine("Processing files already uploaded to converter.");
-            PantherClient panther = new PantherClient(company, pantherPassword);
             ConvertedExcelFiles converted = new ConvertedExcelFiles(convertApiKey);
             converted.Process(panther);
-        }
-
-        /// <summary>
-        /// Downloads settlements from panther, converts, parses and persists to database.
-        /// </summary>
-        private static void DownloadAndConvert(string company, string pantherPassword, string convertApiKey, int max = 10)
-        {
-            System.Console.WriteLine("Downloading settlements from panther and uploading to conversion service.");
-
-            var task = Task.Run(async () => 
-            {
-                PantherClient panther = new PantherClient(company, pantherPassword);
-                List<SettlementHistory> settlementsToConvert = await GetSettlementsToConvert(panther);
-                if (settlementsToConvert != null)
-                {
-                    ConversionOrchestrator orchestrator = new ConversionOrchestrator(settlementsToConvert, convertApiKey);
-                    await orchestrator.StartAsync(max);
-                }
-                else
-                {
-                    System.Console.WriteLine($"No settlements found to convert for {company}.");
-                }
-                
-            });
-            task.Wait();
-        }
-
-        private static void UpdateSettlementHeaders(string company, string pantherPassword)
-        {
-            System.Console.WriteLine($"Updating settlements for company: {company}.");
-
-            var task = Task.Run(async () => 
-            {
-                PantherClient panther = new PantherClient(company, pantherPassword);
-                List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
-
-                SettlementRepository repository = new SettlementRepository();
-                List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
-
-                List<SettlementHistory> settlementsToUpdate = 
-                    settlements.Intersect(savedSettlements, new SettlementHistoryComparer())
-                    .ToList();
-                repository.SaveSettlements(settlementsToUpdate);
-            });
-            task.Wait();           
-        }
-
-        private static void UpdateAllSettlements()
-        {
-            System.Console.WriteLine($"Updating all settlements.");
-
-            var task = Task.Run(async () => 
-            {
-                SettlementRepository repository = new SettlementRepository();
-                List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
-                repository.SaveSettlements(savedSettlements);
-            });
-            task.Wait();                       
-        }
-
-        private static async Task<List<SettlementHistory>> GetSettlementsToConvert(PantherClient panther, int max = 10)
-        {
-            List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
-
-            SettlementRepository repository = new SettlementRepository();
-            List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
-
-            // Don't try to convert settlements we've already persisted.
-            List<SettlementHistory> settlementsToDownload = settlements.Except(savedSettlements, new SettlementHistoryComparer())
-                .OrderByDescending(s => s.SettlementDate)
-                .Take(max)
-                .ToList();
-
-            List<SettlementHistory> settlementsToConvert = 
-                await panther.DownloadSettlementsAsync(settlementsToDownload);
-
-            return settlementsToConvert;
-        }
-
-        private static void CreateSettlementsForYear(int year)
-        {
-            int[] weeks = Enumerable.Range(1, 52).ToArray();
-            CreateSettlementStatement(year, weeks);            
-        }
-
-        private static void CreateSettlementStatement(int year, int[] weeks, int? truckid = null)
-        {
-            System.Console.WriteLine($"Creating settlements {year}/{weeks[0]} {truckid?.ToString()}");
-           
-            Task.Run( async () => 
-            {   
-                FuelChargeRepository fuelRepository = new FuelChargeRepository(year, weeks);
-                SettlementRepository settlementRepository = new SettlementRepository();    
-                List<SettlementHistory> settlements = await settlementRepository.GetSettlementsByWeekAsync(year, weeks);
-                if (settlements.Count() > 0)
-                {
-                    if (truckid != null)
-                        settlements = FilterSettlementsByTruck(settlements, (int)truckid).ToList();
-
-                    SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements, fuelRepository);
-                    foreach (string driver in GetDrivers(settlements, truckid))
-                    {
-                        string file = generator.Generate(year, weeks, driver);
-                    }
-                }
-                else
-                {
-                    System.Console.WriteLine($"No settlements found for the specified {year} and {string.Join(",", weeks)}");
-                }
-            }
-            ).Wait();
-        }
-
-        private static IEnumerable<SettlementHistory> FilterSettlementsByTruck(
-                IEnumerable<SettlementHistory> settlements, int truckid)
-        {
-            return settlements.Where(
-                        s => s.Credits.Where(c => c.TruckId == truckid).Count() > 0
-                    );
         }
 
         private static int[] GetTrucks(List<SettlementHistory> settlements)
@@ -262,26 +152,6 @@ namespace Trucks
                 trucks.AddRange(s.Credits.Select(c => c.TruckId).Where(t => t > 0));
 
             return trucks.Distinct().ToArray();
-        }
-
-        private static IEnumerable<string> GetDrivers(List<SettlementHistory> settlements, int? truckid)
-        {
-            IEnumerable<string> drivers = settlements.SelectMany(s => 
-                    s.Credits.Where(c => truckid != null ? c.TruckId == truckid : true)
-                    .Select(c => c.Driver)).Distinct();                
-            
-            return drivers;
-        }
-
-        private static void ConsolidateSettlements()
-        {
-            System.Console.WriteLine("Consolidating settlements.");
-            var task = Task.Run( async () => 
-            {
-                SettlementRepository repository = new SettlementRepository();
-                await repository.ConsolidateSettlementsAsync();
-            });
-            task.Wait();
         }
 
         private static void GetReport()
