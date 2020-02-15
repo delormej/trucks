@@ -76,7 +76,7 @@ namespace Trucks
                 UpdateCellValue("Detent", c.Detention);
                 UpdateCellValue("H load", c.HandLoad);
                 UpdateCellValue("Layovr", c.Layover);
-                UpdateCellValue("Accessorial Other", c.Other);                                
+                UpdateCellValue("Accessorial Other", c.Bonus);                                
             }
         }
 
