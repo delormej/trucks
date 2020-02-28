@@ -175,6 +175,7 @@ namespace Trucks
                 for (int i = 1; i <= 52; i++)
                 {
                     string sheet = $"Week_{i}";
+                    wb.UpdateCellValue(sheet, "C3", "");
                     wb.UpdateCellValue(sheet, "C32", "0");
                     wb.UpdateCellFormula(sheet, "AA31", formula);
                 }

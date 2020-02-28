@@ -39,7 +39,7 @@ namespace Trucks
 
                     if (workbook == null)
                     {
-                        workbook = new SettlementWorkbook(year, truck, driver, settlement.SettlementDate);
+                        workbook = new SettlementWorkbook(year, truck, driver);
                         outputFile = workbook.Create();
                     }
                     if (workbook == null)
@@ -50,7 +50,8 @@ namespace Trucks
 
                     if (workbook.Truck != truck)
                         workbook.Truck = truck; 
-                    workbook.AddSheet(week);
+                    
+                    workbook.AddSheet(week, GetSheetSettlementDate(settlement));
                     workbook.AddSettlementId(settlement.SettlementId);
 
                     //
@@ -89,6 +90,14 @@ namespace Trucks
             }
 
             return outputFile;
+        }
+
+        private DateTime GetSheetSettlementDate(SettlementHistory settlement)
+        {
+            DateTime sheetSettlementDate = settlement.SettlementDate.AddDays(7);
+            if (sheetSettlementDate.DayOfWeek != DayOfWeek.Friday)
+                throw new ApplicationException($"Settlement date must be a Friday: {settlement.SettlementDate}");            
+            return sheetSettlementDate;
         }
 
         private string GetDriver(IEnumerable<Credit> credits)
