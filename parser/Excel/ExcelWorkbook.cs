@@ -138,6 +138,9 @@ namespace Trucks
             }
             else
             {
+                if (theCell.CellFormula != null)
+                    DeleteCellFormula(theCell, wsPart);
+
                 theCell.DataType = CellValues.InlineString;
                 theCell.CellValue = null; // new CellValue(value);
                 theCell.InlineString = new InlineString() { Text = new Text(value) };
@@ -166,6 +169,39 @@ namespace Trucks
 
             wbPart.Workbook.CalculationProperties.ForceFullCalculation = true;
             wbPart.Workbook.CalculationProperties.FullCalculationOnLoad = true;       
+        }
+
+        private void DeleteCellFormula(Cell cell, WorksheetPart wsPart)
+        {
+            try
+            {
+                CalculationChainPart calculationChainPart = wbPart.CalculationChainPart;
+                CalculationChain calculationChain = calculationChainPart.CalculationChain;
+                var calculationCells = calculationChain.Elements<CalculationCell>().ToList();
+
+                if (cell.CellFormula != null && cell.CellValue != null)
+                {
+                    string cellRef = cell.CellReference;                            
+                    CalculationCell calculationCell = calculationCells.Where(c => c.CellReference == cellRef).FirstOrDefault();
+
+                    cell.CellFormula.Remove();
+                    if(calculationCell != null)
+                    {                       
+                        calculationCell.Remove();
+                        calculationCells.Remove(calculationCell);
+                    }
+                    else
+                    {
+                        System.Console.WriteLine("Unable to delete cell formula, no further details.");
+                    }                   
+                }
+                if (calculationCells.Count == 0)
+                    wbPart.DeletePart(calculationChainPart);                
+            }
+            catch (Exception e)
+            {
+                throw new ApplicationException("Unable to delete cell formula.", e);
+            }
         }
 
         private WorksheetPart GetWorksheetPart(string sheetName)

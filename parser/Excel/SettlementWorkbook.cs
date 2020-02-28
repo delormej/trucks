@@ -12,7 +12,6 @@ namespace Trucks
         string _sheetName = null;
         int _truck = 0;
         string _driver = null;
-        DateTime _settlementDate;
 
         public string TemplateFile = "Excel/template.xlsx";
 
@@ -22,11 +21,10 @@ namespace Trucks
             set { _truck = value; }
         }
 
-        public SettlementWorkbook(int year, int truck, string driver, DateTime settlementDate)
+        public SettlementWorkbook(int year, int truck, string driver)
         {
             _truck = truck;
             _driver = driver;
-            _settlementDate = settlementDate;
             _outputFilename = GetFilename(year, driver);
         }
 
@@ -37,14 +35,14 @@ namespace Trucks
             return _outputFilename;                    
         }
 
-        public void AddSheet(int week)
+        public void AddSheet(int week, DateTime settlementDate)
         {
             _sheetName = GetSheetname(week);
              _lastLoadRow = 5;
 
             SetTruck();
             SetDriver();    
-            SetSettlementDate();
+            SetSettlementDate(settlementDate);
         }
 
         private string GetFilename(int year, string driver)
@@ -126,10 +124,10 @@ namespace Trucks
             UpdateCellValue(_sheetName, TruckIdCell, _truck.ToString());
         }
 
-        private void SetSettlementDate()
+        private void SetSettlementDate(DateTime settlementDate)
         {
             const string SettlementDateCell = "C3";
-            UpdateCellValue(_sheetName, SettlementDateCell, _settlementDate.ToString("yyyy-MM-dd"));
+            UpdateCellValue(_sheetName, SettlementDateCell, settlementDate.ToString("yyyy-MM-dd"));
         }
         
         private string GetSheetname(int week)
