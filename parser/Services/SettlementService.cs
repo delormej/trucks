@@ -7,13 +7,6 @@ namespace Trucks
 {
     public class SettlementService
     {
-
-        // UpdateSettlementHeaders
-        // UpdateAllSettlements
-        // ConsolidateSettlements
-        // CreateSettlementStatement
-        // PrintSettlementHeader
-
         public string[] CreateSettlementsForYear(int year)
         {
             int[] weeks = Enumerable.Range(1, 52).ToArray();
@@ -102,6 +95,7 @@ namespace Trucks
 
             List<KeyValuePair<string, SettlementHistory>> downloads = 
                 await DownloadMissingSettlements(panther, max);
+                
             List<ConversionJob> jobs = new List<ConversionJob>();
             
             foreach (var download in downloads)
@@ -113,24 +107,22 @@ namespace Trucks
                 job.Company = download.Value.CompanyId.ToString();
                 job.SettlementId = download.Value.SettlementId;
                 job.SettlementDate = download.Value.SettlementDate;
-             
-                QueueUploaded(job);
                 jobs.Add(job);
             }       
 
             return jobs;     
         }
 
-        /// <summary>
-        /// Downloads and returns 'max' settlements from panther that we have not persisted, ordered by
-        /// descending date.
-        /// <summary>
-        private async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadMissingSettlements(PantherClient panther, int max = 10)
+        public async Task<List<SettlementHistory>> GetMissingSettlementsAsync(PantherClient panther, int max = 10)
         {
-            List<SettlementHistory> settlements = await panther.GetSettlementsAsync();
-
             SettlementRepository repository = new SettlementRepository();
-            List<SettlementHistory> savedSettlements = await repository.GetSettlementsAsync();
+            var repoTask = repository.GetSettlementsAsync();
+            var pantherTask = panther.GetSettlementsAsync();
+
+            await Task.WhenAll(repoTask, pantherTask);
+
+            List<SettlementHistory> savedSettlements = repoTask.Result;
+            List<SettlementHistory> settlements = pantherTask.Result;
 
             // Don't try to convert settlements we've already persisted.
             List<SettlementHistory> settlementsToDownload = settlements.Except(savedSettlements, new SettlementHistoryComparer())
@@ -138,17 +130,24 @@ namespace Trucks
                 .Take(max)
                 .ToList();
 
+            return settlementsToDownload;            
+        }
+
+        /// <summary>
+        /// Downloads and returns 'max' settlements from panther that we have not persisted, ordered by
+        /// descending date.
+        /// <summary>
+        private async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadMissingSettlements(
+            PantherClient panther, int max = 10)
+        {
+            List<SettlementHistory> settlementsToDownload = 
+                await GetMissingSettlementsAsync(panther, max);
+
             List<KeyValuePair<string, SettlementHistory>> settlementsToConvert = 
                 await panther.DownloadSettlementsAsync(settlementsToDownload);
 
             return settlementsToConvert;
         }
-
-        /// <summary>
-        /// Places the result of the upload on a queue for another process to dequeue when ready.
-        /// </summary>
-        private void QueueUploaded(ConversionJob job)
-        { /* Call DAPR? */ }                
 
         private IEnumerable<SettlementHistory> FilterSettlementsByTruck(
                 IEnumerable<SettlementHistory> settlements, int truckid)

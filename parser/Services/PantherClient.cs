@@ -100,11 +100,17 @@ namespace Trucks
         public async Task<string> DownloadSettlementReportAsync(string checkNumber)
         {
             Directory.CreateDirectory(company);
-            string uri = pantherBaseUrl + $"/Financial/DownloadSettlementReport?ChkNo={checkNumber}";
+            string uri = GetDownloadSettlementUri(checkNumber);
             byte[] bytes = await client.GetByteArrayAsync(uri);
             string filename = GetLocalFileName(company, checkNumber);
             File.WriteAllBytes(filename, bytes);
             return filename;
+        }
+
+        public Task<Stream> GetSettlementReportStreamAsync(string checkNumber)
+        {
+            string uri = GetDownloadSettlementUri(checkNumber);
+            return client.GetStreamAsync(uri);
         }
 
         private async Task<bool> LoginAsync()
@@ -141,7 +147,12 @@ namespace Trucks
         {
             string uri = pantherBaseUrl + "/Financial/PayrollHist";
             return client.GetStringAsync(uri);
-        }        
+        } 
+
+        private string GetDownloadSettlementUri(string checkNumber)
+        {
+            return pantherBaseUrl + $"/Financial/DownloadSettlementReport?ChkNo={checkNumber}";
+        }       
 
         private bool Exists(SettlementHistory settlement)
         {
