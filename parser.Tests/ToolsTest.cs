@@ -16,10 +16,10 @@ namespace parser.Tests
             PrintYearWeek(DateTime.Parse("2019/12/20"), "CD629969 = week 52");
             PrintYearWeek(DateTime.Parse("2020/1/3"), "CD630651 = week 2");
 
-            DateTime settlementDate = DateTime.Parse("2019/01/14");
+            DateTime settlementDate = DateTime.Parse("2019/01/03");
             int year, week;
             Tools.GetWeekNumber(settlementDate, out week, out year);
-            Assert.True(year == 2018, $"Year should be 2018, not {year}");
+            Assert.True(year == 2019, $"Year should be 2019, not {year}");
         }
 
         private void PrintYearWeek(DateTime settlementDate, string settlement = "")

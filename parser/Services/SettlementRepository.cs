@@ -19,10 +19,9 @@ namespace Trucks
                 Container container = cosmosClient.GetContainer(databaseId, "SettlementHistory");
                 QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
                 
-                await foreach (SettlementHistory settlement in 
-                    container.GetItemQueryIterator<SettlementHistory>(queryDefinition, null, 
-                            new QueryRequestOptions() { PartitionKey = new PartitionKey("CompanyId") }))
-                        settlements.Add(settlement);
+                await foreach (SettlementHistory item in 
+                    container.GetItemQueryIterator<SettlementHistory>(queryDefinition))
+                        settlements.Add(item);
             }
             return settlements;
         }
