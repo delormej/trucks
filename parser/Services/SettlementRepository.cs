@@ -148,5 +148,10 @@ namespace Trucks
             await container.DeleteItemAsync<SettlementHistory>(settlement.SettlementId, partitionKey);
             System.Console.WriteLine($"Deleted: {settlement.SettlementId}");
         }
+
+        protected override async Task CreateContainerAsync()
+        {
+            await CreateContainerAsync("SettlementHistory", "/CompanyId");
+        }
     }
 }

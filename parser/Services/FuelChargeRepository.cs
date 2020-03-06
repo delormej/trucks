@@ -105,5 +105,10 @@ namespace Trucks
                         _charges.Add(item);
             }
         }
+
+        protected override async Task CreateContainerAsync()
+        {
+            await CreateContainerAsync("FuelCharge", "/TruckId");
+        }        
     }
 }
