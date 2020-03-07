@@ -10,6 +10,9 @@ namespace Trucks
 
         // Required for cosmosdb
         public override string id => SettlementId;
+        public DateTime DownloadedTimestamp { get; set; }
+        public DateTime ConvertedTimestamp { get; set; }
+
         public DateTime SettlementDate 
         { 
             get { return this.settlementDate; } 

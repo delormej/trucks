@@ -27,9 +27,48 @@ namespace Trucks
             using (CosmosClient cosmosClient = GetCosmosClient())
             {
                 await CreateDatabaseAsync();
-                await CreateContainerAsync("SettlementHistory", "/CompanyId");
-                await CreateContainerAsync("FuelCharge", "/TruckId");
+                await CreateContainerAsync();
             }
+        }
+
+        /// <summary>
+        /// Save entity to cosmodb.
+        /// </summary>
+        public async Task SaveAsync<T>(T item)
+        {
+            try
+            {
+                using (CosmosClient cosmosClient = GetCosmosClient())
+                {
+                    await AddItemsToContainerAsync<T>(cosmosClient, item);
+                }
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine($"Error attempting to save item to CosmosDb\n\t"+ e.Message);
+                throw e;
+            }
+        } 
+
+        /// <summary>
+        /// Get all entities of a specific type.
+        /// </summary>
+        public async Task<List<T>> GetAsync<T>()
+        {
+            List<T> items = new List<T>();
+            using (CosmosClient cosmosClient = GetCosmosClient())
+            {
+                var sqlQueryText = "SELECT * FROM c";
+
+                Container container = cosmosClient.GetContainer(databaseId, nameof(T));
+                QueryDefinition queryDefinition = new QueryDefinition(sqlQueryText);
+                
+                await foreach (T item in 
+                    container.GetItemQueryIterator<T>(queryDefinition))
+                        items.Add(item);
+            }
+            
+            return items;
         }
 
         /// <summary>
@@ -50,7 +89,7 @@ namespace Trucks
         /// Specify "/LastName" as the partition key since we're storing family information, to ensure good distribution of requests and storage.
         /// </summary>
         /// <returns></returns>
-        private async Task CreateContainerAsync(string containerId, string partitionKeyPath)
+        protected async Task CreateContainerAsync(string containerId, string partitionKeyPath)
         {
             // Create a new container
             using (CosmosClient cosmosClient = GetCosmosClient())
@@ -102,6 +141,6 @@ namespace Trucks
             await container.ReplaceThroughputAsync(throughput);
         }
 
-
+        protected abstract Task CreateContainerAsync();
     }
 }
