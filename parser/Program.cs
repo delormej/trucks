@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Trucks
@@ -24,19 +25,23 @@ namespace Trucks
                 return;
             }
             
-            SettlementService settlementService = new SettlementService();
             PantherClient panther = new PantherClient(company, password);
+            ExcelConverter converter = new ExcelConverter(convertApiKey);
+            SettlementService settlementService = new SettlementService();
+            SettlementOrchestrator orchestrator = new SettlementOrchestrator(
+                settlementService,
+                converter,
+                panther);
 
             if (args.Length < 1)
             {
-                ExcelConverter converter = new ExcelConverter(convertApiKey);
                 Process(settlementService, converter, panther);
             }
             else
             {
                 string command = args[0].ToLower();
                 if (command == "uploaded")
-                    ProcessUploaded(panther, convertApiKey);
+                    ProcessUploaded(panther, converter);
                 else if (command == "downloaded")
                     ProcessDownloaded(panther, convertApiKey);
                 else if (command == "update")
@@ -131,17 +136,26 @@ namespace Trucks
 
         private static void Process(SettlementService settlementService, ExcelConverter converter, PantherClient panther)
         {
-            var conversionTask = Task<IEnumerable<ConversionJob>>.Run( () =>
-                settlementService.StartConversion(panther, converter));
-            conversionTask.Wait();
-            foreach(var result in conversionTask.Result)
-                System.Console.WriteLine($"Settlement {result.SettlementId} uploaded for conversion.");
+            // Could have 'n' orchestators, 1 for each panther company???
+
+            bool finished = false;
+            SettlementOrchestrator orchestrator = new SettlementOrchestrator(
+                settlementService, converter, panther);
+            orchestrator.Finished += (o, e) => finished = true;
+
+            Task.Run( () =>
+            {
+                orchestrator.Start();
+                while (!finished)
+                    Thread.Sleep(5000);
+            }).Wait();
+            System.Console.WriteLine("Done!");
         }
 
-        private static void ProcessUploaded(PantherClient panther, string convertApiKey)
+        private static void ProcessUploaded(PantherClient panther, ExcelConverter excelConverter)
         {
             System.Console.WriteLine("Processing files already uploaded to converter.");
-            ConvertedExcelFiles converted = new ConvertedExcelFiles(convertApiKey);
+            ConvertedExcelFiles converted = new ConvertedExcelFiles(excelConverter);
             converted.Process(panther);
         }
 

@@ -6,15 +6,36 @@ using System.Threading.Tasks;
 
 namespace Trucks
 {
+    public class ProcessedSettlement
+    {
+        public string SettlementId { get; set; }
+        public int CompanyId { get; set; }
+        public DateTime SettlementDate { get; set; }
+        public DateTime ProcessedTimestamp { get; set; }
+    }
+
+    public class ProcessedSettlementEventArgs : EventArgs
+    {
+        public ProcessedSettlementEventArgs(ProcessedSettlement settlement)
+        {
+            this.settlement = settlement;
+        }
+
+        public ProcessedSettlement settlement { get; set; }
+    }
+
     public class ConvertedExcelFiles
     {
-         ExcelConverter converter;
-         SettlementRepository repository;
+        ExcelConverter _converter;
+        SettlementRepository _repository;
 
-        public ConvertedExcelFiles(string convertApiKey)
+        public delegate void ProcessedSettlementEventHandler(object sender, ProcessedSettlementEventArgs e);
+        public event ProcessedSettlementEventHandler ProcessedSettlement;
+
+        public ConvertedExcelFiles(ExcelConverter converter)
         {
-            converter = new ExcelConverter(convertApiKey);
-            repository = new SettlementRepository();
+            this._converter = converter;
+            _repository = new SettlementRepository();
         }
 
         /// <summary>
@@ -23,7 +44,7 @@ namespace Trucks
         /// <summary>
         public void Process(PantherClient pantherClient)
         {            
-            var getConverterResults = converter.QueryAllAsync();
+            var getConverterResults = _converter.QueryAllAsync();
             var getSettlementHeaders = pantherClient.GetSettlementsAsync();
             Task.WaitAll(getConverterResults, getSettlementHeaders);
 
@@ -55,16 +76,29 @@ namespace Trucks
                 s.SettlementId == settlementId).FirstOrDefault();            
         }
 
+        /// <summary>
+        /// Invoked when a settlement has been converted to xlsx.
+        /// </summary>
         private async Task ProcessResultAsync(ZamzarResult result, SettlementHistory settlement)
         {
             string filename = result.target_files[0].name;
             if (!File.Exists(filename))
-                filename = await DownloadFromConverter(converter, result, 
+                filename = await DownloadFromConverter(_converter, result, 
                     settlement.CompanyId.ToString());
             if (filename != null)
             {
                 if (SaveFileToDatabase(filename, settlement))
-                    await converter.DeleteAsync(result.target_files[0].id);
+                {
+                    await _converter.DeleteAsync(result.target_files[0].id);
+                    // Notify that a settlement was processed.
+                    if (ProcessedSettlement != null)
+                        ProcessedSettlement(this, new ProcessedSettlementEventArgs(
+                            new ProcessedSettlement() {
+                                SettlementId = settlement.SettlementId,
+                                ProcessedTimestamp = DateTime.Now,
+                                CompanyId = settlement.CompanyId
+                        }));
+                }
             }
         }
 
@@ -94,7 +128,7 @@ namespace Trucks
                 settlement.Credits = parsedSettlement.Credits;
                 settlement.Deductions = parsedSettlement.Deductions;
 
-                repository.SaveSettlementHistoryAsync(settlement).Wait();
+                _repository.SaveSettlementHistoryAsync(settlement).Wait();
                 System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");   
                 return true;               
             }

@@ -13,5 +13,6 @@ namespace Trucks
         public string SettlementId { get; set; }
         public DateTime SettlementDate { get; set; }
         public string SourceXls { get; set; }
+        public DateTime SourceTimestamp { get; set; }
     }
 }

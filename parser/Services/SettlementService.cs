@@ -5,8 +5,21 @@ using System.Linq;
 
 namespace Trucks
 {
+    public class NewSettlementEventArgs : EventArgs
+    {
+        public NewSettlementEventArgs(ConversionJob job)
+        {
+            this.Job = job;
+        }
+
+        public ConversionJob Job { get; set; }
+    }
+
     public class SettlementService
     {
+        public delegate void NewSettlementEventHandler(object sender, NewSettlementEventArgs e);
+        public event NewSettlementEventHandler NewSettlement;
+
         public string[] CreateSettlementsForYear(int year)
         {
             int[] weeks = Enumerable.Range(1, 52).ToArray();
@@ -89,27 +102,27 @@ namespace Trucks
             return settlementIds;             
         }
 
-        public async Task<IEnumerable<ConversionJob>> StartConversion(PantherClient panther, ExcelConverter converter, int max = 10)
+        public async IAsyncEnumerable<ConversionJob> StartConversion(PantherClient panther, ExcelConverter converter, int max = 10)
         {
             System.Console.WriteLine("Downloading settlements from panther and uploading to conversion service.");
 
             List<KeyValuePair<string, SettlementHistory>> downloads = 
                 await DownloadMissingSettlements(panther, max);
-                
-            List<ConversionJob> jobs = new List<ConversionJob>();
             
             foreach (var download in downloads)
             {
                 ConversionJob job = new ConversionJob();
                 job.SourceXls = download.Key;
+                job.SourceTimestamp = DateTime.Now;
                 job.Result = await converter.UploadAsync(job.SourceXls);
                 job.Company = download.Value.CompanyId.ToString();
                 job.SettlementId = download.Value.SettlementId;
                 job.SettlementDate = download.Value.SettlementDate;
-                jobs.Add(job);
+                yield return job;
+                
+                if (NewSettlement != null)
+                    NewSettlement(this, new NewSettlementEventArgs(job));
             }       
-
-            return jobs;     
         }
 
         public async Task<List<SettlementHistory>> GetMissingSettlementsAsync(PantherClient panther, int max = 10)
