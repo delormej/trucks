@@ -100,10 +100,9 @@ namespace Trucks
             
             foreach (var download in downloads)
             {
-                string filename = download.Key;
-
                 ConversionJob job = new ConversionJob();
-                job.Result = await converter.UploadAsync(filename);
+                job.SourceXls = download.Key;
+                job.Result = await converter.UploadAsync(job.SourceXls);
                 job.Company = download.Value.CompanyId.ToString();
                 job.SettlementId = download.Value.SettlementId;
                 job.SettlementDate = download.Value.SettlementDate;
