@@ -6,6 +6,9 @@ using System.Collections.Generic;
 
 namespace Trucks
 {
+    /// <summary>
+    /// Helper to parse an excel spreadsheet into a Settlement object.
+    /// </summary>
     public class SettlementHistoryParser
     {
         private string _filename;

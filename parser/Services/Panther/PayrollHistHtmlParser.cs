@@ -4,6 +4,9 @@ using HtmlAgilityPack;
 
 namespace Trucks
 {
+    /// <summary>
+    /// Helper objecct to convert an HTML page into a list of Settlements.
+    /// </summary>
     public class PayrollHistHtmlParser
     {
         private int companyId;
