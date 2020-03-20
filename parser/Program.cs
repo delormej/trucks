@@ -1,4 +1,32 @@
-﻿using System;
+﻿/*
+Next big things:
+1) Orchestrator
+- Orchestrator should be responsible for:
+    1) Run()
+        - Starts end to end BLOCKING process.
+        - Uses EventWaitHandle to receive finish signal.
+    2) ProcessUploaded()
+        - Resumes by checking the excel conversion service for settlements to download
+    3) ProcessDownloaded()
+        - Resume by checking local file system for files
+
+- Orchestrator should be executable as a backend service.
+- Orchestrator should be able to store resumable state in an Azure Queue/or other service.
+- Orchestrator should be able to work on behalf of multiple companies configured... 
+    maybe even multiple conversion keys for Excel Converter
+
+2) DriverSettlement
+- A driver settlement is a new backing object store that represents a driver's settlement
+- It's a single document, but it can contain credits and deductions that are both pulled
+    from Panther as well as manually entered.
+
+3) Configuration provider should be used and passed to Orchestrator
+    - Contains one or more companies
+    - Contains one or more conversion keys
+*/
+
+
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,11 +54,10 @@ namespace Trucks
             }
             
             PantherClient panther = new PantherClient(company, password);
-            ExcelConverter converter = new ExcelConverter(convertApiKey);
             SettlementService settlementService = new SettlementService();
             SettlementOrchestrator orchestrator = new SettlementOrchestrator(
                 settlementService,
-                converter,
+                new ExcelConverter(convertApiKey),
                 panther);
 
             if (args.Length < 1)
@@ -39,9 +66,9 @@ namespace Trucks
             {
                 string command = args[0].ToLower();
                 if (command == "uploaded")
-                    ProcessUploaded(orchestrator);
+                    orchestrator.ProcessUploaded();
                 else if (command == "downloaded")
-                    ProcessDownloaded(panther, convertApiKey);
+                    orchestrator.ProcessDownloaded();
                 else if (command == "update")
                     settlementService.UpdateHeadersFromPanther(panther);
                 else if (command == "updateall")
@@ -96,73 +123,18 @@ namespace Trucks
             return options;
         }
 
-        private static void ProcessDownloaded(PantherClient panther, string convertApiKey)
-        {
-            System.Console.WriteLine("Processing local converted xlsx files.");
-
-            List<SettlementHistory> settlementHeaders = null; 
-            List<SettlementHistory> downloadedSettlements = null;
-            var getSettlementHeaders = Task.Run( async () => {
-                settlementHeaders = await panther.GetSettlementsAsync();
-            });
-            var parseLocalFiles = Task.Run( () =>
-                downloadedSettlements = SettlementHistoryParser.ParseLocalFiles(panther.Company));
-            Task.WaitAll(getSettlementHeaders, parseLocalFiles);
-
-            if (downloadedSettlements.Count > 0)
-            {
-                System.Console.WriteLine($"Found {downloadedSettlements.Count} to process.");
-                List<SettlementHistory> mergedSettlements = 
-                    MergeSettlements(settlementHeaders, downloadedSettlements).ToList();
-                System.Console.WriteLine($"Merged {mergedSettlements.Count}.");
-
-                if (mergedSettlements.Count > 0)
-                {
-                    SettlementRepository repository = new SettlementRepository();
-                    repository.SaveSettlements(mergedSettlements);            
-                }
-            }
-            else
-            {
-                System.Console.WriteLine($"No settlements found for company {panther.Company}.");
-            }
-        }
-
-        private static IEnumerable<SettlementHistory> MergeSettlements(
-                List<SettlementHistory> settlementHeaders, 
-                List<SettlementHistory> downloadedSettlements)
-        {
-            foreach (var downloadedSettlement in downloadedSettlements)
-            {
-                var match = settlementHeaders.Where(s => 
-                    s.SettlementId == downloadedSettlement.SettlementId)
-                    .FirstOrDefault();
-
-                if (match != null)
-                {
-                    match.Credits = downloadedSettlement.Credits;
-                    match.Deductions = downloadedSettlement.Deductions;
-                    yield return match;
-                }
-                else
-                {
-                    System.Console.WriteLine($"No match while merging settlement {downloadedSettlement.SettlementId}");
-                }
-            }
-        }
-
         private static void Process(SettlementOrchestrator orchestrator)
         {
             // Could have 'n' orchestators, 1 for each panther company???
             System.Console.WriteLine("End to end process starting...");
-            orchestrator.StartAsync().Wait();
+            orchestrator.Run();
             System.Console.WriteLine("Done!");
         }
 
         private static void ProcessUploaded(SettlementOrchestrator orchestrator)
         {
             System.Console.WriteLine("Processing files already uploaded to converter.");
-            orchestrator.ProcessConvertedAsync().Wait();
+            orchestrator.ProcessUploaded();
         }
 
         private static void GetTruckRevenueReport()

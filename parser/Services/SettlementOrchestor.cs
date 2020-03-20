@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Trucks
 {
@@ -26,22 +27,60 @@ namespace Trucks
         /// <summary>
         /// Downloads the latest settlements, converts XLS to XLSX, processes and persists to backing store.
         /// </summary>
-        public async Task StartAsync()
+        public void Run()
         {
-            // #pragma warning disable CS4014
-            // This is an anti-pattern, figure out a better way to signal and forget.
-            // Biggest issue here is what happens if an exception is thrown in the method
-            // below, it will not catch.
-            System.Console.WriteLine("Downloading settlements from panther and uploading to conversion service.");
-            int max = 10;
-            await _settlementService.DownloadMissingSettlements(_panther, max);
+            const int max = 10;
+            System.Console.WriteLine("Running end to end...");
+
+            EventWaitHandle ewh = new EventWaitHandle(false, EventResetMode.ManualReset);
+            Finished += (o, e) => ewh.Set();
+            
+            _settlementService.DownloadMissingSettlements(_panther, max).Wait();
+            ewh.WaitOne();
+        }
+
+        public void ProcessDownloaded()
+        {
+            System.Console.WriteLine("Processing local converted xlsx files.");
+
+            List<SettlementHistory> settlementHeaders = null; 
+            List<SettlementHistory> downloadedSettlements = null;
+            var getSettlementHeaders = Task.Run( async () => {
+                settlementHeaders = await _panther.GetSettlementsAsync();
+            });
+            var parseLocalFiles = Task.Run( () =>
+                downloadedSettlements = SettlementHistoryParser.ParseLocalFiles(_panther.Company));
+            Task.WaitAll(getSettlementHeaders, parseLocalFiles);
+
+            if (downloadedSettlements.Count > 0)
+            {
+                System.Console.WriteLine($"Found {downloadedSettlements.Count} to process.");
+                List<SettlementHistory> mergedSettlements = 
+                    MergeSettlements(settlementHeaders, downloadedSettlements).ToList();
+                System.Console.WriteLine($"Merged {mergedSettlements.Count}.");
+
+                if (mergedSettlements.Count > 0)
+                {
+                    SettlementRepository repository = new SettlementRepository();
+                    repository.SaveSettlements(mergedSettlements);            
+                }
+            }
+            else
+            {
+                System.Console.WriteLine($"No settlements found for company {_panther.Company}.");
+            }
         }
 
         /// <summary>
         /// Downloads converted files from converter site, processes them as SettlementHistory
         /// and persists them to the database.
         /// <summary>
-        public async Task ProcessConvertedAsync()
+        public void ProcessUploaded()
+        {
+            ProcessConvertedAsync().Wait();
+        }
+
+        private async Task ProcessConvertedAsync()
         {
             IEnumerable<ZamzarResult> results = await _excelConverter.QueryAllAsync();
             List<SettlementHistory> settlementHeaders = await _panther.GetSettlementsAsync();
@@ -65,7 +104,30 @@ namespace Trucks
             }       
         }
 
-        public bool HasUploads()
+        private static IEnumerable<SettlementHistory> MergeSettlements(
+                List<SettlementHistory> settlementHeaders, 
+                List<SettlementHistory> downloadedSettlements)
+        {
+            foreach (var downloadedSettlement in downloadedSettlements)
+            {
+                var match = settlementHeaders.Where(s => 
+                    s.SettlementId == downloadedSettlement.SettlementId)
+                    .FirstOrDefault();
+
+                if (match != null)
+                {
+                    match.Credits = downloadedSettlement.Credits;
+                    match.Deductions = downloadedSettlement.Deductions;
+                    yield return match;
+                }
+                else
+                {
+                    System.Console.WriteLine($"No match while merging settlement {downloadedSettlement.SettlementId}");
+                }
+            }
+        }
+
+        private bool HasUploads()
         {
             return _uploaded?.Count > 0;
         }
