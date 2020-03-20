@@ -10,7 +10,6 @@ namespace Trucks
     {
         private SettlementService _settlementService;
         private ExcelConverter _excelConverter;
-        private ConvertedExcelFiles _converted;
         private PantherClient _panther;
         private List<ConversionJob> _uploaded;
         public event EventHandler Finished;
@@ -19,7 +18,6 @@ namespace Trucks
         {
             _uploaded = new List<ConversionJob>();
             _excelConverter = excelConverter;
-            _converted = new ConvertedExcelFiles(_excelConverter);
             _panther = panther;
             _settlementService = settlementService;
             _settlementService.OnNewSettlement += OnNewSettlement;
@@ -99,11 +97,10 @@ namespace Trucks
             ProcessConvertedAsync().Wait();
         }
 
-        private void OnProcessed(object state, ProcessedSettlementEventArgs eventArgs)
+        private void OnProcessed(string settlementId)
         {
             // Remove from the queue.
-            string id = eventArgs.settlement.SettlementId;
-            var job = _uploaded.Find(s => s.SettlementId == id);
+            var job = _uploaded.Find(s => s.SettlementId == settlementId);
             if (job != null)
                 _uploaded.Remove(job);
             if (!HasUploads() && Finished != null)
@@ -125,6 +122,7 @@ namespace Trucks
                 SettlementRepository repository = new SettlementRepository();
                 if (repository.SaveFileToDatabase(filename, settlement))
                 {
+                    OnProcessed(settlement.SettlementId);
                     await _excelConverter.DeleteAsync(result.target_files[0].id);
                     System.Console.WriteLine($"Processed Settlement company: {settlement.CompanyId}, id: {settlement.SettlementId} {DateTime.Now} ");
                 }
