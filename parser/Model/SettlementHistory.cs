@@ -34,4 +34,13 @@ namespace Trucks
         public List<Credit> Credits { get; set; }
         public List<Deduction> Deductions { get; set; }
     }
+
+    public static class SettlementHistoryExtensions
+    {
+        public static SettlementHistory FindSettlementById(
+            this List<SettlementHistory> settlements, string id)
+        {
+            return settlements.Find(s => s.SettlementId == id);
+        }
+    }    
 }

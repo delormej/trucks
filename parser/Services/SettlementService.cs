@@ -15,49 +15,78 @@ namespace Trucks
         public ConversionJob Job { get; set; }
     }
 
+    public class CreateSettlementOptions
+    {
+        public int Year;
+        public string[] Companies;
+        public int[] Weeks;
+        public int TruckId;
+
+        public static CreateSettlementOptions LastWeek()
+        {
+            int week, year;
+            Tools.GetWeekNumber(DateTime.Now, out week, out year);
+
+            return new CreateSettlementOptions() {
+                Year = year,
+                Weeks = new int[] { week }
+            };
+        }
+
+        public override string ToString()
+        {
+            // TODO: stringify this object in some way.
+            return "options...";
+        }
+    }
+
+    /// <summary>
+    /// Primary interface for working with settlement statements.
+    /// </summary>
     public class SettlementService
     {
         public delegate void NewSettlementEventHandler(object sender, NewSettlementEventArgs e);
-        public event NewSettlementEventHandler NewSettlement;
+        public event NewSettlementEventHandler OnNewSettlement;
 
-        public string[] CreateSettlementsForYear(int year)
+        /// <summary>
+        /// Creates Excel settlement files for the specified options from existing settlement history stored
+        /// in the repo and returns the list of the file names created.
+        /// </summary>
+        public async Task<List<string>> CreateSettlementsAsync(CreateSettlementOptions options)
         {
-            int[] weeks = Enumerable.Range(1, 52).ToArray();
-            return CreateSettlementStatement(year, weeks);     
-        }
+            System.Console.WriteLine($"Creating settlements for: {options}");
 
-        public string[] CreateSettlementStatement(int year, int[] weeks, int? truckid = null)
-        {
-            System.Console.WriteLine($"Creating settlements {year}/{weeks[0]} {truckid?.ToString()}");
-            List<string> files = new List<string>();
-           
-            Task.Run( async () => 
-            {   
-                FuelChargeRepository fuelRepository = new FuelChargeRepository(year, weeks);
-                SettlementRepository settlementRepository = new SettlementRepository();    
-                List<SettlementHistory> settlements = await settlementRepository.GetSettlementsByWeekAsync(year, weeks);
-                if (settlements.Count() > 0)
-                {
-                    if (truckid != null)
-                        settlements = FilterSettlementsByTruck(settlements, (int)truckid).ToList();
+            List<string> settlementFiles = new List<string>();
 
-                    SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements, fuelRepository);
-                    foreach (string driver in GetDrivers(settlements, truckid))
-                    {
-                        string file = generator.Generate(year, weeks, driver);
-                        files.Add(file);
-                    }
-                }
-                else
+            FuelChargeRepository fuelRepository = new FuelChargeRepository(options.Year, options.Weeks);
+            SettlementRepository settlementRepository = new SettlementRepository();    
+            List<SettlementHistory> settlements = await 
+                settlementRepository.GetSettlementsByWeekAsync(options.Year, options.Weeks);
+
+            if (settlements.Count() > 0)
+            {
+                if (options.TruckId > 0)
+                    settlements = FilterSettlementsByTruck(settlements, options.TruckId).ToList();
+
+                SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements, fuelRepository);
+                foreach (string driver in GetDrivers(settlements, options.TruckId))
                 {
-                    System.Console.WriteLine($"No settlements found for the specified {year} and {string.Join(",", weeks)}");
+                    string file = generator.Generate(options.Year, options.Weeks, driver);
+                    settlementFiles.Add(file);
                 }
             }
-            ).Wait();
-            
-            return files.ToArray();
+            else
+            {
+                System.Console.WriteLine($"No settlements found for the specified {options}");
+            }
+        
+            return settlementFiles;
         }
 
+        /// <summary>
+        /// Updates all settlement headers in the backing repo with values from panther web site and
+        /// return a list of settlement ids updated.
+        /// </summary>
         public string[] UpdateHeadersFromPanther(PantherClient panther)
         {
             System.Console.WriteLine($"Updating settlements for company: {panther.Company}.");
@@ -82,8 +111,8 @@ namespace Trucks
         }
 
         /// <summary>
-        /// Forces an update on all settlements.  This is normally used to update the serialized 
-        /// object after a schema change.
+        /// Helper method that forces an update on all settlements.  This is normally used to update
+        /// the serialized object after a schema change in the SettlementHistory object.
         /// </summary>
         public string[] UpdateAll()
         {
@@ -102,29 +131,32 @@ namespace Trucks
             return settlementIds;             
         }
 
-        public async IAsyncEnumerable<ConversionJob> StartConversion(PantherClient panther, ExcelConverter converter, int max = 10)
+        /// <summary>
+        /// Downloads and returns 'max' settlements from panther that we have not persisted, ordered by
+        /// descending date.
+        /// <summary>
+        public async Task DownloadMissingSettlements(PantherClient panther, int max = 10)
         {
-            System.Console.WriteLine("Downloading settlements from panther and uploading to conversion service.");
+            List<SettlementHistory> settlementsToDownload = 
+                await GetMissingSettlementsAsync(panther, max);
 
-            List<KeyValuePair<string, SettlementHistory>> downloads = 
-                await DownloadMissingSettlements(panther, max);
-            
-            foreach (var download in downloads)
+            await foreach(var download in panther.DownloadSettlementsAsync(settlementsToDownload))
             {
                 ConversionJob job = new ConversionJob();
                 job.SourceXls = download.Key;
                 job.SourceTimestamp = DateTime.Now;
-                job.Result = await converter.UploadAsync(job.SourceXls);
                 job.Company = download.Value.CompanyId.ToString();
                 job.SettlementId = download.Value.SettlementId;
-                job.SettlementDate = download.Value.SettlementDate;
-                yield return job;
-                
-                if (NewSettlement != null)
-                    NewSettlement(this, new NewSettlementEventArgs(job));
-            }       
+                job.SettlementDate = download.Value.SettlementDate;                
+
+                if (OnNewSettlement != null)
+                    OnNewSettlement(this, new NewSettlementEventArgs(job));
+            }
         }
 
+        /// <summary>
+        /// Returns the intersection of settlements available on Panther which are not in the repository.
+        /// </summary>
         public async Task<List<SettlementHistory>> GetMissingSettlementsAsync(PantherClient panther, int max = 10)
         {
             SettlementRepository repository = new SettlementRepository();
@@ -143,23 +175,7 @@ namespace Trucks
                 .ToList();
 
             return settlementsToDownload;            
-        }
-
-        /// <summary>
-        /// Downloads and returns 'max' settlements from panther that we have not persisted, ordered by
-        /// descending date.
-        /// <summary>
-        private async Task<List<KeyValuePair<string, SettlementHistory>>> DownloadMissingSettlements(
-            PantherClient panther, int max = 10)
-        {
-            List<SettlementHistory> settlementsToDownload = 
-                await GetMissingSettlementsAsync(panther, max);
-
-            List<KeyValuePair<string, SettlementHistory>> settlementsToConvert = 
-                await panther.DownloadSettlementsAsync(settlementsToDownload);
-
-            return settlementsToConvert;
-        }
+        }        
 
         private IEnumerable<SettlementHistory> FilterSettlementsByTruck(
                 IEnumerable<SettlementHistory> settlements, int truckid)
@@ -169,6 +185,9 @@ namespace Trucks
                     );
         }
 
+        /// <summary>
+        /// Gets the list of drivers from the settlements, optionally for a given truck.
+        /// </summary>
         private IEnumerable<string> GetDrivers(List<SettlementHistory> settlements, int? truckid)
         {
             IEnumerable<string> drivers = settlements.SelectMany(s => 

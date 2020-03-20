@@ -34,14 +34,12 @@ namespace Trucks
                 panther);
 
             if (args.Length < 1)
-            {
-                Process(settlementService, converter, panther);
-            }
+                Process(orchestrator);
             else
             {
                 string command = args[0].ToLower();
                 if (command == "uploaded")
-                    ProcessUploaded(panther, converter);
+                    ProcessUploaded(orchestrator);
                 else if (command == "downloaded")
                     ProcessDownloaded(panther, convertApiKey);
                 else if (command == "update")
@@ -49,21 +47,9 @@ namespace Trucks
                 else if (command == "updateall")
                     settlementService.UpdateAll();                    
                 else if (command == "report")
-                    GetReport();
+                    GetTruckRevenueReport();
                 else if (command == "settlement")
-                {
-                    int year = int.Parse(args[1]);
-                    int week = int.Parse(args[2]);
-                    int truck;
-                    if (args.Length > 3 && int.TryParse(args[3], out truck))
-                        settlementService.CreateSettlementStatement(year, new int[] { week }, truck);
-                    else
-                        settlementService.CreateSettlementStatement(year, new int[] { week });
-                }
-                else if (command == "year")
-                {
-                    settlementService.CreateSettlementsForYear(int.Parse(args[1]));
-                }
+                    CreateSettlements(settlementService, args);
                 else if (command == "fixtemplate")
                 {
                     FixTemplate(args[1]);
@@ -77,6 +63,37 @@ namespace Trucks
                     PrintSettlementHeader(args[1], args[2]);
                 }         
             }
+        }
+
+        private static void CreateSettlements(SettlementService service, string[] args)
+        {
+            System.Console.WriteLine("Creating settlements...");
+            Task.Run(() =>
+                service.CreateSettlementsAsync(GetOptions(args))
+            ).Wait();
+        }
+
+        private static CreateSettlementOptions GetOptions(string[] args)
+        {
+            CreateSettlementOptions options = new CreateSettlementOptions();
+            if (args.Length > 1)
+            {
+                int year = int.Parse(args[1]);
+                options.Year = year;
+            }
+            if (args.Length > 2)
+            {
+                int week = int.Parse(args[2]);
+                options.Weeks = new int[] { week };
+            }
+            if (args.Length > 3)
+            {
+                int truck;
+                if (int.TryParse(args[3], out truck)) 
+                    options.TruckId = truck;
+            }
+
+            return options;
         }
 
         private static void ProcessDownloaded(PantherClient panther, string convertApiKey)
@@ -134,41 +151,21 @@ namespace Trucks
             }
         }
 
-        private static void Process(SettlementService settlementService, ExcelConverter converter, PantherClient panther)
+        private static void Process(SettlementOrchestrator orchestrator)
         {
             // Could have 'n' orchestators, 1 for each panther company???
-
-            bool finished = false;
-            SettlementOrchestrator orchestrator = new SettlementOrchestrator(
-                settlementService, converter, panther);
-            orchestrator.Finished += (o, e) => finished = true;
-
-            Task.Run( () =>
-            {
-                orchestrator.Start();
-                while (!finished)
-                    Thread.Sleep(5000);
-            }).Wait();
+            System.Console.WriteLine("End to end process starting...");
+            orchestrator.StartAsync().Wait();
             System.Console.WriteLine("Done!");
         }
 
-        private static void ProcessUploaded(PantherClient panther, ExcelConverter excelConverter)
+        private static void ProcessUploaded(SettlementOrchestrator orchestrator)
         {
             System.Console.WriteLine("Processing files already uploaded to converter.");
-            ConvertedExcelFiles converted = new ConvertedExcelFiles(excelConverter);
-            converted.Process(panther);
+            orchestrator.ProcessConvertedAsync().Wait();
         }
 
-        private static int[] GetTrucks(List<SettlementHistory> settlements)
-        {
-            List<int> trucks = new List<int>();
-            foreach (var s in settlements)
-                trucks.AddRange(s.Credits.Select(c => c.TruckId).Where(t => t > 0));
-
-            return trucks.Distinct().ToArray();
-        }
-
-        private static void GetReport()
+        private static void GetTruckRevenueReport()
         {
             System.Console.WriteLine("Generating report.");
             var task = Task.Run( async () => 
@@ -201,14 +198,8 @@ namespace Trucks
         {
             System.Console.WriteLine($"Saving {file} fuel charges to database.");
             FuelChargeRepository repository = new FuelChargeRepository();
-
-            var loadTask = repository.LoadAsync(file);
-            Task.Run( async () => {
-                await repository.EnsureDatabaseAsync();
-                await loadTask;
-                repository.SaveAsync(repository.Charges);
-                System.Console.WriteLine($"Saved {repository.Charges?.Count()} charge(s).");
-            }).Wait();
+            repository.SaveAsync(file).Wait();
+            System.Console.WriteLine($"Saved {repository.Charges?.Count()} charge(s).");
         }
 
         private static void PrintSettlementHeader(string settlementId, string companyId)

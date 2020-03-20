@@ -48,11 +48,10 @@ namespace Trucks
             await _loading;
         }
 
-
         /// <summary>
         /// Persists all charges to backing datastore.
         /// </summary>
-        public void SaveAsync(IEnumerable<FuelCharge> charges)
+        public async Task SaveAsync(IEnumerable<FuelCharge> charges)
         {
             using (CosmosClient cosmos = GetCosmosClient())
             {
@@ -60,7 +59,7 @@ namespace Trucks
                 {
                     try
                     {
-                        AddItemsToContainerAsync<FuelCharge>(cosmos, charge).Wait();
+                        await AddItemsToContainerAsync<FuelCharge>(cosmos, charge);
                         System.Console.WriteLine($"Saved {charge.id}");
                     }
                     catch (Exception e)
@@ -69,6 +68,19 @@ namespace Trucks
                     }
                 }
             }
+        }
+
+        public async Task SaveAsync(string file)
+        {
+            System.Console.WriteLine($"Saving {file} fuel charges to database.");
+
+            // Run these async.
+            await Task.WhenAll(
+                LoadAsync(file),
+                EnsureDatabaseAsync()
+            );
+            await SaveAsync(Charges);
+            System.Console.WriteLine($"Saved {Charges?.Count()} charge(s).");
         }
 
         private Task ReadFromFileAsync(string filename)
