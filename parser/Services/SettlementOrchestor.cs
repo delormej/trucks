@@ -186,15 +186,23 @@ namespace Trucks
             if (!File.Exists(filename))
                 filename = await DownloadFromConverter(result, settlement.CompanyId);
             
-            if (filename != null)
+            if (filename == null)
             {
-                SettlementRepository repository = new SettlementRepository();
-                if (repository.SaveFileToDatabase(filename, settlement))
-                {
-                    OnProcessed(settlement.SettlementId);
-                    await _excelConverter.DeleteAsync(result.target_files[0].id);
-                    System.Console.WriteLine($"Processed Settlement company: {settlement.CompanyId}, id: {settlement.SettlementId} {DateTime.Now} ");
-                }
+                System.Console.WriteLine($"Local file {filename} does not exist.");
+                return;
+            }
+
+            SettlementRepository repository = new SettlementRepository();
+            try 
+            {
+                await repository.SaveFileToDatabaseAsync(filename, settlement);
+                System.Console.WriteLine($"Processed Settlement company: {settlement.CompanyId}, id: {settlement.SettlementId} {DateTime.Now} ");
+                OnProcessed(settlement.SettlementId);
+                await _excelConverter.DeleteAsync(result.target_files[0].id);                    
+            }
+            catch (ApplicationException e)
+            {
+                System.Console.WriteLine(e.Message);
             }
         }
 
