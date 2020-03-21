@@ -46,6 +46,10 @@ namespace Trucks
     public class SettlementService
     {
         public delegate void NewSettlementEventHandler(object sender, NewSettlementEventArgs e);
+        
+        /// <summary>
+        /// Raised when a settlement has been downloaded from panther.
+        /// </summary>
         public event NewSettlementEventHandler OnNewSettlement;
 
         /// <summary>

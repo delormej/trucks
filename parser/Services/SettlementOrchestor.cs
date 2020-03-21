@@ -7,6 +7,10 @@ using System.Linq;
 
 namespace Trucks
 {
+    /// <summary> 
+    /// Responsible for managing long running process end to end to download settlements, convert from
+    /// xls to xlsx, parse and persist in backing store.  
+    /// </summary>
     public class SettlementOrchestrator
     {
         private SettlementService _settlementService;
@@ -39,6 +43,10 @@ namespace Trucks
             ewh.WaitOne();
         }
 
+        /// <summary>
+        /// Resume process where settlements were downloaded as xlsx from converter.  Parses
+        /// local xlsx files and persists to the backing store.
+        /// </summary>
         public void ProcessDownloaded()
         {
             System.Console.WriteLine("Processing local converted xlsx files.");
@@ -73,7 +81,7 @@ namespace Trucks
 
         /// <summary>
         /// Downloads converted files from converter site, processes them as SettlementHistory
-        /// and persists them to the database.
+        /// and persists them to the backing store.
         /// <summary>
         public void ProcessUploaded()
         {
@@ -132,6 +140,9 @@ namespace Trucks
             return _uploaded?.Count > 0;
         }
 
+        /// <summary>
+        /// Invoked when a new settlement has been downloaded from Panther.
+        /// </summary>
         private void OnNewSettlement(object state, NewSettlementEventArgs e)
         {
             Task.Run(async () => 
@@ -146,19 +157,15 @@ namespace Trucks
             }).Wait();
         }
 
-        private void SetCheckForDownload()
-        {
-            // Set a timer , on expiration of that timer check for available downloads.
-            const int MINUTES_3 = 3 * 60 * 1000; 
-            Timer timer = new Timer(OnCheckForDownload, null, MINUTES_3, Timeout.Infinite);
-        }
-
         private void OnCheckForDownload(object state)
         {
             System.Console.WriteLine("Processing files already uploaded to converter.");
             ProcessConvertedAsync().Wait();
         }
 
+        /// <summary>
+        /// Invoked when a settlement has been persisted to the backing store.
+        /// </summary>
         private void OnProcessed(string settlementId)
         {
             // Remove from the queue.
@@ -189,6 +196,16 @@ namespace Trucks
                     System.Console.WriteLine($"Processed Settlement company: {settlement.CompanyId}, id: {settlement.SettlementId} {DateTime.Now} ");
                 }
             }
+        }
+
+        /// <summary> 
+        /// Kicks off a timer, on elapsed it checks for downloads on excel converter service.
+        /// </summary>
+        private void SetCheckForDownload()
+        {
+            // Set a timer , on expiration of that timer check for available downloads.
+            const int MINUTES_3 = 3 * 60 * 1000; 
+            Timer timer = new Timer(OnCheckForDownload, null, MINUTES_3, Timeout.Infinite);
         }
 
         private async Task<string> DownloadFromConverter(ZamzarResult result, int companyId)
