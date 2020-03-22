@@ -44,6 +44,15 @@ namespace Trucks
         }
 
         /// <summary>
+        /// Downloads converted files from converter site, processes them as SettlementHistory
+        /// and persists them to the backing store.
+        /// <summary>
+        public void ProcessUploaded()
+        {
+            ProcessConvertedAsync().Wait();
+        }
+
+        /// <summary>
         /// Resume process where settlements were downloaded as xlsx from converter.  Parses
         /// local xlsx files and persists to the backing store.
         /// </summary>
@@ -78,16 +87,12 @@ namespace Trucks
                 System.Console.WriteLine($"No settlements found for company {_panther.Company}.");
             }
         }
-
+        
         /// <summary>
+        /// Internal async implementation of ProcessUploaded()
         /// Downloads converted files from converter site, processes them as SettlementHistory
         /// and persists them to the backing store.
         /// <summary>
-        public void ProcessUploaded()
-        {
-            ProcessConvertedAsync().Wait();
-        }
-
         private async Task ProcessConvertedAsync()
         {
             IEnumerable<ZamzarResult> results = await _excelConverter.QueryAllAsync();
@@ -111,6 +116,55 @@ namespace Trucks
                     result.target_files[0].name);
             }       
         }
+
+        /// <summary>
+        /// Invoked when a settlement has been converted to xlsx.
+        /// </summary>
+        private async Task ProcessConversionResultAsync(ZamzarResult result, SettlementHistory settlement)
+        {
+            string filename = result.target_files[0].name;
+            
+            if (!File.Exists(filename))
+                filename = await DownloadFromConverter(result, settlement.CompanyId);
+            
+            if (filename == null)
+            {
+                System.Console.WriteLine($"Local file {filename} does not exist.");
+                return;
+            }
+
+            SettlementRepository repository = new SettlementRepository();
+            try 
+            {
+                await repository.SaveFileToDatabaseAsync(filename, settlement);
+                System.Console.WriteLine($"Processed Settlement company: {settlement.CompanyId}, id: {settlement.SettlementId} {DateTime.Now} ");
+                OnProcessed(settlement.SettlementId);
+                await _excelConverter.DeleteAsync(result.target_files[0].id);                    
+            }
+            catch (ApplicationException e)
+            {
+                System.Console.WriteLine(e.Message);
+            }
+        }
+
+        private async Task<string> DownloadFromConverter(ZamzarResult result, int companyId)
+        {
+            string company = companyId.ToString();
+            if (result.target_files.Length == 0)
+                throw new ApplicationException($"Unable to find a file for result: {result}");
+            
+            string filename = Path.Combine(company, result.target_files[0].name);
+            int fileId = result.target_files[0].id;
+            if (await _excelConverter.DownloadAsync(fileId, filename))
+            {
+                System.Console.WriteLine($"Downloaded: {filename}");
+                return filename;
+            }
+            else
+            {
+                return null;
+            }            
+        }        
 
         private static IEnumerable<SettlementHistory> MergeSettlements(
                 List<SettlementHistory> settlementHeaders, 
@@ -160,7 +214,7 @@ namespace Trucks
         private void OnCheckForDownload(object state)
         {
             System.Console.WriteLine("Processing files already uploaded to converter.");
-            ProcessConvertedAsync().Wait();
+            ProcessUploaded();
         }
 
         /// <summary>
@@ -176,36 +230,6 @@ namespace Trucks
                 Finished(this, null);
         }
 
-        /// <summary>
-        /// Invoked when a settlement has been converted to xlsx.
-        /// </summary>
-        private async Task ProcessConversionResultAsync(ZamzarResult result, SettlementHistory settlement)
-        {
-            string filename = result.target_files[0].name;
-            
-            if (!File.Exists(filename))
-                filename = await DownloadFromConverter(result, settlement.CompanyId);
-            
-            if (filename == null)
-            {
-                System.Console.WriteLine($"Local file {filename} does not exist.");
-                return;
-            }
-
-            SettlementRepository repository = new SettlementRepository();
-            try 
-            {
-                await repository.SaveFileToDatabaseAsync(filename, settlement);
-                System.Console.WriteLine($"Processed Settlement company: {settlement.CompanyId}, id: {settlement.SettlementId} {DateTime.Now} ");
-                OnProcessed(settlement.SettlementId);
-                await _excelConverter.DeleteAsync(result.target_files[0].id);                    
-            }
-            catch (ApplicationException e)
-            {
-                System.Console.WriteLine(e.Message);
-            }
-        }
-
         /// <summary> 
         /// Kicks off a timer, on elapsed it checks for downloads on excel converter service.
         /// </summary>
@@ -214,25 +238,6 @@ namespace Trucks
             // Set a timer , on expiration of that timer check for available downloads.
             const int MINUTES_3 = 3 * 60 * 1000; 
             Timer timer = new Timer(OnCheckForDownload, null, MINUTES_3, Timeout.Infinite);
-        }
-
-        private async Task<string> DownloadFromConverter(ZamzarResult result, int companyId)
-        {
-            string company = companyId.ToString();
-            if (result.target_files.Length == 0)
-                throw new ApplicationException($"Unable to find a file for result: {result}");
-            
-            string filename = Path.Combine(company, result.target_files[0].name);
-            int fileId = result.target_files[0].id;
-            if (await _excelConverter.DownloadAsync(fileId, filename))
-            {
-                System.Console.WriteLine($"Downloaded: {filename}");
-                return filename;
-            }
-            else
-            {
-                return null;
-            }            
         }
     }
 }
