@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Trucks
 {
@@ -41,6 +42,14 @@ namespace Trucks
             this List<SettlementHistory> settlements, string id)
         {
             return settlements.Find(s => s.SettlementId == id);
+        }
+
+        public static bool ContainsCompany(
+            this List<SettlementHistory> settlements, int companyId)
+        {
+            if (settlements == null)
+                return false;
+            return settlements.Count(s => s.CompanyId == companyId) > 0;
         }
     }    
 }

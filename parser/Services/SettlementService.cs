@@ -45,12 +45,21 @@ namespace Trucks
     /// </summary>
     public class SettlementService
     {
+        private List<SettlementHistory> _settlementHeaders;
+
         public delegate void NewSettlementEventHandler(object sender, NewSettlementEventArgs e);
         
         /// <summary>
         /// Raised when a settlement has been downloaded from panther.
         /// </summary>
         public event NewSettlementEventHandler OnNewSettlement;
+
+        public SettlementService()
+        {
+            _settlementHeaders = new List<SettlementHistory>();
+        }
+
+        public List<SettlementHistory> SettlementHeaders { get { return _settlementHeaders; } }
 
         /// <summary>
         /// Creates Excel settlement files for the specified options from existing settlement history stored
@@ -152,7 +161,7 @@ namespace Trucks
                 job.Company = download.Value.CompanyId.ToString();
                 job.SettlementId = download.Value.SettlementId;
                 job.SettlementDate = download.Value.SettlementDate;                
-
+                
                 if (OnNewSettlement != null)
                     OnNewSettlement(this, new NewSettlementEventArgs(job));
             }
@@ -164,6 +173,8 @@ namespace Trucks
         public async Task<List<SettlementHistory>> GetMissingSettlementsAsync(PantherClient panther, int max = 10)
         {
             SettlementRepository repository = new SettlementRepository();
+            SettlementHistoryComparer comparer = new SettlementHistoryComparer();
+
             var repoTask = repository.GetSettlementsAsync();
             var pantherTask = panther.GetSettlementsAsync();
 
@@ -171,12 +182,19 @@ namespace Trucks
 
             List<SettlementHistory> savedSettlements = repoTask.Result;
             List<SettlementHistory> settlements = pantherTask.Result;
+            
+            if (settlements == null)
+                throw new ApplicationException("No settlements found on Panther!");
+            
+            // Add, but don't duplicate.
+            _settlementHeaders.AddRange(settlements.Except(_settlementHeaders, comparer));
 
             // Don't try to convert settlements we've already persisted.
-            List<SettlementHistory> settlementsToDownload = settlements.Except(savedSettlements, new SettlementHistoryComparer())
-                .OrderByDescending(s => s.SettlementDate)
-                .Take(max)
-                .ToList();
+            List<SettlementHistory> settlementsToDownload = 
+                settlements.Except(savedSettlements, comparer)
+                    .OrderByDescending(s => s.SettlementDate)
+                    .Take(max)
+                    .ToList();
 
             return settlementsToDownload;            
         }        

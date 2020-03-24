@@ -11,6 +11,12 @@
     <PackageReference Include="DocumentFormat.OpenXml" Version="2.8.1" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.17" />
     <PackageReference Include="ChoETL.JSON" Version="1.1.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="3.1.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="appsettings.json" CopyToOutputDirectory="Always" />
+  </ItemGroup>
 </Project>

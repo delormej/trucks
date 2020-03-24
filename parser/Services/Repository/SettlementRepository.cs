@@ -141,23 +141,6 @@ namespace Trucks
             }
         }
 
-        public async Task SaveFileToDatabaseAsync(string filename, SettlementHistory settlement)
-        {
-            SettlementHistory parsedSettlement = SettlementHistoryParser.Parse(filename);
-            if (parsedSettlement != null)
-            {
-                settlement.Credits = parsedSettlement.Credits;
-                settlement.Deductions = parsedSettlement.Deductions;
-
-                await SaveSettlementHistoryAsync(settlement);
-                System.Console.WriteLine($"Saved {settlement.SettlementId} to db.");     
-            }
-            else
-            {
-                throw new ApplicationException($"Unable to parse {filename}.");
-            }
-        }
-
         private async Task DeleteSettlementAsync(CosmosClient cosmosClient, SettlementHistory settlement)
         {
             Container container = cosmosClient.GetContainer(databaseId, typeof(SettlementHistory).Name);

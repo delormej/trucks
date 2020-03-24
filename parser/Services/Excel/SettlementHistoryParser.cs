@@ -12,22 +12,20 @@ namespace Trucks
     public class SettlementHistoryParser
     {
         private string _filename;
-        private string _settlementId;
+        private SettlementHistory _settlement;
 
         public static SettlementHistory Parse(string filename)
         {
-            SettlementHistoryParser parser = new SettlementHistoryParser(
-                filename, GetSettlementIdFromFile(filename));
+            SettlementHistoryParser parser = new SettlementHistoryParser(filename);
             SettlementHistory settlement = parser.Parse();         
             
             return settlement;
         }
 
-        public static List<SettlementHistory> ParseLocalFiles(string company)
+        public static List<SettlementHistory> ParseLocalFiles(string directory)
         {
-            int companyId = int.Parse(company);
             List<SettlementHistory> settlements = new List<SettlementHistory>();
-            string[] settlementFiles = Directory.GetFiles(company, "*.xlsx");           
+            string[] settlementFiles = Directory.GetFiles(directory, "*.xlsx");           
 
             foreach (var filename in settlementFiles)
             {
@@ -37,47 +35,52 @@ namespace Trucks
                     continue;
                 }
 
-                SettlementHistory settlement = Parse(filename);
-                settlement.CompanyId = companyId;
-                settlements.Add(settlement);
-                System.Console.WriteLine($"Parsed: {filename} with {settlement.Credits.Count} credits.");            
+                try
+                {
+                    SettlementHistory settlement = Parse(filename);
+                    if (settlement == null)
+                    {
+                        System.Console.WriteLine($"Unable to read {filename}");
+                        continue;
+                    }
+                    settlements.Add(settlement);
+                    System.Console.WriteLine($"Parsed: {filename} with {settlement.Credits.Count} credits.");            
+                }
+                catch (Exception e)
+                {
+                    System.Console.WriteLine($"Unable to parse {filename}, error:\n{e}");
+                }
             }
 
             return settlements;
         }
 
-        public static string GetSettlementIdFromFile(string file)
-        {
-            string filename = Path.GetFileName(file);
-            int i = filename.IndexOf(".xls");
-            if (i <= 0)
-                throw new ApplicationException($"Unable to get SettlmentId from filename: {file}");
-
-            return filename.Substring(0, i);            
-        }
-
-        public SettlementHistoryParser(string filename, string settlementId)
+        private SettlementHistoryParser(string filename)
         {
             this._filename = filename;
-            this._settlementId = settlementId;
         }
 
-        public SettlementHistory Parse()
+        private SettlementHistory Parse()
         {
             try
             {
+                SettlementFile file = SettlementFile.FromFilename(_filename);
+                if (string.IsNullOrWhiteSpace(file.SettlementId))
+                    throw new ApplicationException($"Unable to find settlement idea for {_filename}.");
+
+                _settlement = new SettlementHistory();
+                _settlement.SettlementId = file.SettlementId;
+                _settlement.CompanyId = file.CompanyId;
+
                 SettlementHistoryWorkbook workbook = new SettlementHistoryWorkbook(_filename);
-                
-                SettlementHistory settlement = new SettlementHistory();
-                settlement.SettlementId = this._settlementId;          
-                settlement.Credits = GetCredits(workbook);
-                settlement.Deductions = GetDeductions(workbook);
-                settlement.SettlementDate = GetLastCreditDate(settlement);
-                return settlement;
+                _settlement.Credits = GetCredits(workbook);
+                _settlement.Deductions = GetDeductions(workbook);
+                _settlement.SettlementDate = GetLastCreditDate();
+                return _settlement;
             }
             catch (Exception e)
             {
-                System.Console.WriteLine($"Error parsing {_filename}: {_settlementId}.  Error:\n\t{e.Message}");
+                System.Console.WriteLine($"Error parsing {_filename}: Error:\n\t{e.Message}");
                 return null;
             }
         }
@@ -92,16 +95,16 @@ namespace Trucks
             return GetSettlementItemsFromSheet<Deduction>("DEDUCTIONS", workbook);
         }         
 
-        private DateTime GetLastCreditDate(SettlementHistory settlement)
+        private DateTime GetLastCreditDate()
         {
             DateTime? creditDate = ConvertDate(
-                settlement.Credits.OrderByDescending(s => ConvertDate(s.CreditDate))
+                _settlement.Credits.OrderByDescending(s => ConvertDate(s.CreditDate))
                     .FirstOrDefault().CreditDate);
 
             if (creditDate != null)
                 return (DateTime)creditDate;
             else
-                return settlement.SettlementDate;
+                return _settlement.SettlementDate;
 
             DateTime? ConvertDate(string date)
             {
@@ -127,8 +130,8 @@ namespace Trucks
                         break;
 
                     T item = new T();
-                    item.SettlementId = _settlementId;
-                    item.id = $"{_settlementId}-{rowIndex++}";
+                    item.SettlementId = _settlement.SettlementId;
+                    item.id = $"{_settlement.SettlementId}-{rowIndex++}";
 
                     foreach (SettlementHistoryWorkbook.HelperCell cell in row.GetCells())
                     {

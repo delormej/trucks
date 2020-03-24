@@ -109,12 +109,10 @@ namespace Trucks
                 else
                 {
                     using (FileStream writer = File.Create(outputFile))
-                    {
                         stream.CopyTo(writer);
-                        return true;
-                    }
                 }
             }
+            return true;
         }
 
         public async Task<bool> DeleteAsync(int fileId)

@@ -29,6 +29,7 @@ Next big things:
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace Trucks
 {
@@ -38,13 +39,17 @@ namespace Trucks
         {
             ShowUsage(args);
 
+            IConfiguration config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
+                .Build();
+            ParserConfiguration parserConfig = new ParserConfiguration();
+            config.Bind("parser", parserConfig);
+
             string company = Environment.GetEnvironmentVariable("TRUCKCOMPANY");
             string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD");
-            string convertApiKey = Environment.GetEnvironmentVariable("ZAMZARKEY");
+            string convertApiKey = parserConfig.ZamzarKey;
 
-            if (string.IsNullOrWhiteSpace(company) || 
-                string.IsNullOrWhiteSpace(password) || 
-                string.IsNullOrWhiteSpace(convertApiKey))
+            if (string.IsNullOrWhiteSpace(convertApiKey))
             {
                 System.Console.WriteLine("Must set TRUCKCOMPANY, TRUCKPASSWORD, ZAMZARKEY env variables.");
                 return;
@@ -53,19 +58,21 @@ namespace Trucks
             PantherClient panther = new PantherClient(company, password);
             SettlementService settlementService = new SettlementService();
             SettlementOrchestrator orchestrator = new SettlementOrchestrator(
+                config,
                 settlementService,
-                new ExcelConverter(convertApiKey),
-                panther);
+                new ExcelConverter(convertApiKey));
 
             if (args.Length < 1)
                 Process(orchestrator);
             else
             {
                 string command = args[0].ToLower();
+                System.Console.WriteLine($"Executing {command}");
+
                 if (command == "uploaded")
-                    orchestrator.ProcessUploaded();
+                    orchestrator.ProcessUploadedAsync().Wait();
                 else if (command == "downloaded")
-                    orchestrator.ProcessDownloaded();
+                    orchestrator.ProcessLocal();
                 else if (command == "update")
                     settlementService.UpdateHeadersFromPanther(panther);
                 else if (command == "updateall")
@@ -124,14 +131,8 @@ namespace Trucks
         {
             // Could have 'n' orchestators, 1 for each panther company???
             System.Console.WriteLine("End to end process starting...");
-            orchestrator.Run();
+            orchestrator.RunAsync().Wait();
             System.Console.WriteLine("Done!");
-        }
-
-        private static void ProcessUploaded(SettlementOrchestrator orchestrator)
-        {
-            System.Console.WriteLine("Processing files already uploaded to converter.");
-            orchestrator.ProcessUploaded();
         }
 
         private static void GetTruckRevenueReport()

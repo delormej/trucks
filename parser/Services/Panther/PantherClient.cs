@@ -11,13 +11,14 @@ namespace Trucks
 {
     public class PantherClient
     {
-        private const string pantherBaseUrl = "http://fleetweb.pantherpremium.com";
-        private string sessionId;
-        private DateTime sessionExpires;
-        private string company;
-        private string password;
+        public const string PantherBaseUrl = "http://fleetweb.pantherpremium.com";
+        public const string DownloadDirectory = "xls";
+        private string _sessionId;
+        private DateTime _sessionExpires;
+        private string _company;
+        private string _password;
 
-        public string Company { get { return company;} }
+        public string Company { get { return _company;} }
 
         HttpClientHandler clientHandler;
         HttpClient client;
@@ -29,13 +30,14 @@ namespace Trucks
 
         private static string GetLocalFileName(string companyId, string settlementId)
         {
-            return Path.Combine(companyId, settlementId + ".xls");
+            SettlementFile file = SettlementFile.FromValues(companyId, settlementId, false);
+            return Path.Combine(DownloadDirectory, file.Filename);
         }
 
         public PantherClient(string company, string password)
         {
-            this.company = company;
-            this.password = password;
+            this._company = company;
+            this._password = password;
             clientHandler = new HttpClientHandler();
             clientHandler.CookieContainer = new CookieContainer();            
             client = new HttpClient(clientHandler);
@@ -83,13 +85,15 @@ namespace Trucks
 
         public async Task<List<SettlementHistory>> GetSettlementsAsync()
         {
+            System.Console.WriteLine($"Trying to load settlements for {_company}");
+
             bool loggedIn = await LoginAsync();
             if (!loggedIn)
                 throw new ApplicationException("Unable to login with credentials.");
             
             string payrollHistHtml = await GetPayrollHistAsync();
             
-            PayrollHistHtmlParser parser = new PayrollHistHtmlParser(company);
+            PayrollHistHtmlParser parser = new PayrollHistHtmlParser(_company);
             List<SettlementHistory> settlements = parser.Parse(payrollHistHtml);
             
             return settlements;            
@@ -100,10 +104,10 @@ namespace Trucks
         /// </summary>
         public async Task<string> DownloadSettlementReportAsync(string checkNumber)
         {
-            Directory.CreateDirectory(company);
+            Directory.CreateDirectory(DownloadDirectory);
             string uri = GetDownloadSettlementUri(checkNumber);
             byte[] bytes = await client.GetByteArrayAsync(uri);
-            string filename = GetLocalFileName(company, checkNumber);
+            string filename = GetLocalFileName(_company, checkNumber);
             File.WriteAllBytes(filename, bytes);
             return filename;
         }
@@ -116,13 +120,13 @@ namespace Trucks
 
         private async Task<bool> LoginAsync()
         {
-            if (sessionExpires > DateTime.Now)
+            if (_sessionExpires > DateTime.Now)
                 return true;
 
             bool isLoggedIn = false;
             
-            string loginUrl = pantherBaseUrl + "/Login/Login";
-            string content = $"UserID={company}&Password={password}&RememberMe=false";
+            string loginUrl = PantherBaseUrl + "/Login/Login";
+            string content = $"UserID={_company}&Password={_password}&RememberMe=false";
             StringContent httpContent = new StringContent(content);
             httpContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
             
@@ -135,8 +139,8 @@ namespace Trucks
             {
                 if (cookie.Name == "session-id")
                 {
-                    sessionId = cookie.Value;
-                    sessionExpires = cookie.Expires;
+                    _sessionId = cookie.Value;
+                    _sessionExpires = cookie.Expires;
                     isLoggedIn = true;
                     break;
                 }
@@ -146,13 +150,13 @@ namespace Trucks
 
         private Task<string> GetPayrollHistAsync()
         {
-            string uri = pantherBaseUrl + "/Financial/PayrollHist";
+            string uri = PantherBaseUrl + "/Financial/PayrollHist";
             return client.GetStringAsync(uri);
         } 
 
         private string GetDownloadSettlementUri(string checkNumber)
         {
-            return pantherBaseUrl + $"/Financial/DownloadSettlementReport?ChkNo={checkNumber}";
+            return PantherBaseUrl + $"/Financial/DownloadSettlementReport?ChkNo={checkNumber}";
         }       
 
         private bool Exists(SettlementHistory settlement)
