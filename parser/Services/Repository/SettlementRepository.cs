@@ -82,6 +82,11 @@ namespace Trucks
             }
         }
 
+        public void SaveDriverSettlements(List<DriverSettlement> settlements)
+        {
+            return;
+        }
+
         public async Task SaveSettlementHistoryAsync(SettlementHistory settlement)
         {
             try

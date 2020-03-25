@@ -80,10 +80,10 @@ namespace Trucks
             if (settlements.Count() > 0)
             {
                 if (options.TruckId > 0)
-                    settlements = FilterSettlementsByTruck(settlements, options.TruckId).ToList();
+                    settlements = settlements.FilterSettlementsByTruck(options.TruckId).ToList();
 
                 SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements, fuelRepository);
-                foreach (string driver in GetDrivers(settlements, options.TruckId))
+                foreach (string driver in settlements.GetDrivers(options.TruckId))
                 {
                     string file = generator.Generate(options.Year, options.Weeks, driver);
                     settlementFiles.Add(file);
@@ -199,25 +199,5 @@ namespace Trucks
 
             return settlementsToDownload;            
         }        
-
-        private IEnumerable<SettlementHistory> FilterSettlementsByTruck(
-                IEnumerable<SettlementHistory> settlements, int truckid)
-        {
-            return settlements.Where(
-                        s => s.Credits.Where(c => c.TruckId == truckid).Count() > 0
-                    );
-        }
-
-        /// <summary>
-        /// Gets the list of drivers from the settlements, optionally for a given truck.
-        /// </summary>
-        private IEnumerable<string> GetDrivers(List<SettlementHistory> settlements, int? truckid)
-        {
-            IEnumerable<string> drivers = settlements.SelectMany(s => 
-                    s.Credits.Where(c => truckid != null ? c.TruckId == truckid : true)
-                    .Select(c => c.Driver)).Distinct();                
-            
-            return drivers;
-        }
     }
 }

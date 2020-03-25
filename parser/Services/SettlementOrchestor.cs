@@ -177,11 +177,18 @@ namespace Trucks
             {
                 SettlementRepository repository = new SettlementRepository();
                 repository.SaveSettlements(settlements);
-            
                 Logger.Log($"Saved {settlements.Count} settlements.");
+
+                List<DriverSettlement> driverSettlements = CreateDriverSettlements(settlements);
+                repository.SaveDriverSettlements(driverSettlements);
             }
 
             OnFinished();
+        }
+
+        private List<DriverSettlement> CreateDriverSettlements(List<SettlementHistory> settlements)
+        {
+            return null;
         }
 
         private bool HasUploads()
