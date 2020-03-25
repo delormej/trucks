@@ -92,7 +92,11 @@ namespace Trucks
                 else if (command == "get")
                 {
                     PrintSettlementHeader(args[1], args[2]);
-                }         
+                }
+                else if (command == "purge")
+                {
+                    PurgeConvertedAsync(parserConfig.ZamzarKey).Wait();
+                }
             }
         }
 
@@ -189,6 +193,18 @@ namespace Trucks
             else
             {
                 System.Console.WriteLine("Settlement not found");
+            }
+        }
+
+        private static async Task PurgeConvertedAsync(string convertApiKey)
+        {
+            System.Console.WriteLine($"Deleting all files on converter...");
+
+            ExcelConverter converter = new ExcelConverter(convertApiKey);
+            foreach (var result in await converter.QueryAllAsync())
+            {
+                await converter.DeleteAsync(result.id);
+                System.Console.WriteLine($"Deleted {result.target_files[0].name}");
             }
         }
 
