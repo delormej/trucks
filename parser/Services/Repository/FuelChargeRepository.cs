@@ -7,6 +7,7 @@ using ChoETL;
 using Newtonsoft.Json;
 using Azure.Cosmos;
 using System.Threading.Tasks;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -60,11 +61,11 @@ namespace Trucks
                     try
                     {
                         await AddItemsToContainerAsync<FuelCharge>(cosmos, charge);
-                        System.Console.WriteLine($"Saved {charge.id}");
+                        Logger.Log($"Saved {charge.id}");
                     }
                     catch (Exception e)
                     {
-                        System.Console.WriteLine($"Error saving {charge.id}\n\t{e.Message}");
+                        Logger.Log($"Error saving {charge.id}\n\t{e.Message}");
                     }
                 }
             }
@@ -72,7 +73,7 @@ namespace Trucks
 
         public async Task SaveAsync(string file)
         {
-            System.Console.WriteLine($"Saving {file} fuel charges to database.");
+            Logger.Log($"Saving {file} fuel charges to database.");
 
             // Run these async.
             await Task.WhenAll(
@@ -80,7 +81,7 @@ namespace Trucks
                 EnsureDatabaseAsync()
             );
             await SaveAsync(Charges);
-            System.Console.WriteLine($"Saved {Charges?.Count()} charge(s).");
+            Logger.Log($"Saved {Charges?.Count()} charge(s).");
         }
 
         private Task ReadFromFileAsync(string filename)

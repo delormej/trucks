@@ -1,8 +1,7 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -30,7 +29,7 @@ namespace Trucks
                     SettlementHistory settlement = GetSettlement(week, driver);
                     if (settlement == null)
                     {
-                        System.Console.WriteLine($"No settlement found for {driver} on week {week}.");
+                        Logger.Log($"No settlement found for {driver} on week {week}.");
                         continue;
                     }
                     int truck = GetTruckForDriver(settlement, driver);
@@ -44,7 +43,7 @@ namespace Trucks
                     }
                     if (workbook == null)
                     {
-                        System.Console.WriteLine($"No workbook created for truck {truck} on week {week}.");
+                        Logger.Log($"No workbook created for truck {truck} on week {week}.");
                         continue;
                     }
 
@@ -76,12 +75,12 @@ namespace Trucks
                         
                     workbook.Save();
 
-                    System.Console.WriteLine($"Created {outputFile} with {credits.Count()} credit(s), ${fuel.ToString("0.00")} in fuel from {settlement.id}:{settlement.SettlementDate.ToString("yyyy-MM-dd")} for company {settlement.CompanyId}.");
+                    Logger.Log($"Created {outputFile} with {credits.Count()} credit(s), ${fuel.ToString("0.00")} in fuel from {settlement.id}:{settlement.SettlementDate.ToString("yyyy-MM-dd")} for company {settlement.CompanyId}.");
                 }
             }
             catch (Exception e)
             {
-                System.Console.WriteLine($"Error generating workbook {outputFile ?? "null"}\n\t{e.Message}");
+                Logger.Log($"Error generating workbook {outputFile ?? "null"}\n\t{e.Message}");
             }
             finally
             {

@@ -29,6 +29,7 @@ Next big things:
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -51,7 +52,7 @@ namespace Trucks
             else
             {
                 string command = args[0].ToLower();
-                System.Console.WriteLine($"Executing {command}");
+                Logger.Log($"Executing {command}");
 
                 if (command == "uploaded")
                     orchestrator.ProcessUploadedAsync().Wait();
@@ -78,7 +79,7 @@ namespace Trucks
 
         private static void CreateSettlements(SettlementService service, string[] args)
         {
-            System.Console.WriteLine("Creating settlements...");
+            Logger.Log("Creating settlements...");
             Task.Run(() =>
                 service.CreateSettlementsAsync(GetOptions(args))
             ).Wait();
@@ -110,14 +111,14 @@ namespace Trucks
         private static void Process(SettlementOrchestrator orchestrator)
         {
             // Could have 'n' orchestators, 1 for each panther company???
-            System.Console.WriteLine("End to end process starting...");
+            Logger.Log("End to end process starting...");
             orchestrator.RunAsync().Wait();
-            System.Console.WriteLine("Done!");
+            Logger.Log("Done!");
         }
 
         private static void GetTruckRevenueReport()
         {
-            System.Console.WriteLine("Generating report.");
+            Logger.Log("Generating report.");
             var task = Task.Run( async () => 
             {
                 SettlementRepository repository = new SettlementRepository();
@@ -129,7 +130,7 @@ namespace Trucks
 
         private static void FixTemplate(string template)
         {
-            System.Console.WriteLine("Fixing template cells C32, AA31");
+            Logger.Log("Fixing template cells C32, AA31");
             const string formula = "IF(B27>0,(0.04*B27)+20,0)"; 
             using (var wb = new SettlementHistoryWorkbook(template))
             {
@@ -146,15 +147,15 @@ namespace Trucks
 
         private static void SaveFuelCharges(string file)
         {
-            System.Console.WriteLine($"Saving {file} fuel charges to database.");
+            Logger.Log($"Saving {file} fuel charges to database.");
             FuelChargeRepository repository = new FuelChargeRepository();
             repository.SaveAsync(file).Wait();
-            System.Console.WriteLine($"Saved {repository.Charges?.Count()} charge(s).");
+            Logger.Log($"Saved {repository.Charges?.Count()} charge(s).");
         }
 
         private static void PrintSettlementHeader(string settlementId, string companyId)
         {
-            System.Console.WriteLine($"Querying for {settlementId} in company: {companyId}");
+            Logger.Log($"Querying for {settlementId} in company: {companyId}");
 
             SettlementHistory settlement = null;
             Task.Run( async () => {
@@ -164,23 +165,23 @@ namespace Trucks
 
             if (settlement != null)
             {
-                System.Console.WriteLine($"{settlement.id}, {settlement.SettlementDate}, {settlement.WeekNumber}");
+                Logger.Log($"{settlement.id}, {settlement.SettlementDate}, {settlement.WeekNumber}");
             }
             else
             {
-                System.Console.WriteLine("Settlement not found");
+                Logger.Log("Settlement not found");
             }
         }
 
         private static async Task PurgeConvertedAsync(string convertApiKey)
         {
-            System.Console.WriteLine($"Deleting all files on converter...");
+            Logger.Log($"Deleting all files on converter...");
 
             ExcelConverter converter = new ExcelConverter(convertApiKey);
             foreach (var result in await converter.QueryAllAsync())
             {
                 await converter.DeleteAsync(result.id);
-                System.Console.WriteLine($"Deleted {result.target_files[0].name}");
+                Logger.Log($"Deleted {result.target_files[0].name}");
             }
         }
 
@@ -196,7 +197,7 @@ namespace Trucks
         {
             for (int i = 0; i < args.Length; i++)
             {
-                System.Console.WriteLine($"[{i}]: {args[i]}");
+                Logger.Log($"[{i}]: {args[i]}");
             }
         }
     }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using System.Collections.Generic;
 using System.Linq;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -76,7 +77,7 @@ namespace Trucks
                         results = JsonSerializer.Deserialize<List<ZamzarResult>>(jobs.GetRawText());
                     else
                     {
-                        System.Console.WriteLine("Unable to find 'data' in converted payload:\n\t" + 
+                        Logger.Log("Unable to find 'data' in converted payload:\n\t" + 
                             data);
                     }
                 }
@@ -103,7 +104,7 @@ namespace Trucks
                 {
                     string errors = GetErrors(stream);
                     if (errors != null)
-                        System.Console.WriteLine($"Error downloading {outputFile}\n\t:{errors}");
+                        Logger.Log($"Error downloading {outputFile}\n\t:{errors}");
                     return false;
                 }
                 else
@@ -124,7 +125,7 @@ namespace Trucks
             using (HttpContent content = response.Content)
             {
                 string data = await content.ReadAsStringAsync();
-                System.Console.WriteLine($"Deleted file {GetDeletedFile(data)}");
+                Logger.Log($"Deleted file {GetDeletedFile(data)}");
                 return true;
             }            
         }
@@ -160,7 +161,7 @@ namespace Trucks
             }
             catch (Exception e)
             {
-                System.Console.WriteLine($"Error getting deleted file name from json: {json}\n\t{e.Message}");
+                Logger.Log($"Error getting deleted file name from json: {json}\n\t{e.Message}");
             }
 
             return fileName;

@@ -1,9 +1,8 @@
 using System;
-using System.Configuration;
 using System.Collections.Generic;
 using System.Linq;
-using Azure.Cosmos;
 using System.Threading.Tasks;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -42,7 +41,7 @@ namespace Trucks
                 .OrderByDescending(s => s.Year);
                 
             List<TruckReport> reports = new List<TruckReport>();           
-            System.Console.WriteLine(TruckReport.Header);
+            Logger.Log(TruckReport.Header);
 
             foreach (var s in orderedSettlements)
             {
@@ -57,7 +56,7 @@ namespace Trucks
                     report.TotalPaid = truck.Sum(t => t.TotalPaid);
                     report.TotalDeductions = s.Deductions.Where(d => d.TruckId == truck.Key).Sum(d => d.TotalDeductions);
                     reports.Add(report);
-                    System.Console.WriteLine(report);
+                    Logger.Log(report.ToString());
                 }
             }
         }

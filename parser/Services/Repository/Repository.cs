@@ -1,9 +1,9 @@
 using System;
-using System.Configuration;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.Cosmos;
 using System.Threading.Tasks;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -50,7 +50,7 @@ namespace Trucks
             }
             catch (Exception e)
             {
-                System.Console.WriteLine($"Error attempting to save item to CosmosDb\n\t"+ e.Message);
+                Logger.Log($"Error attempting to save item to CosmosDb\n\t"+ e.Message);
                 throw e;
             }
         } 
@@ -120,7 +120,7 @@ namespace Trucks
             catch (Exception e)
             {
                 string valueText = System.Text.Json.JsonSerializer.Serialize(value, typeof(T));
-                System.Console.WriteLine($"Unable to save {valueText} in {containerId}, error:\n" + e.Message + "\n" + e.StackTrace);
+                Logger.Log($"Unable to save {valueText} in {containerId}, error:\n" + e.Message + "\n" + e.StackTrace);
             }
         }       
 
@@ -137,7 +137,7 @@ namespace Trucks
             Database db = cosmosClient.GetDatabase(databaseId);
             var throughputTask = SetContainerThroughputAsync(db, throughput, "SettlementHistory");
             throughputTask.Wait();
-            System.Console.WriteLine($"Set throughput to {throughput}.");
+            Logger.Log($"Set throughput to {throughput}.");
         }
 
         protected async Task SetContainerThroughputAsync(Database db, int throughput, string containerName)

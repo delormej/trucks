@@ -47,7 +47,6 @@ namespace Trucks
                 settlement.CheckAmount = ParseDollar(nodes[2]);
                 settlement.ARAmount = ParseDollar(nodes[3]);
                 settlement.DeductionAmount = ParseDollar(nodes[4]);
-                //System.Console.WriteLine(settlement.SettlementId + ": " + settlement.CheckAmount);
             }
          
 

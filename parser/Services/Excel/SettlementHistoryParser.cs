@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Collections.Generic;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -31,7 +32,7 @@ namespace Trucks
             {
                 if (filename.Contains("~$"))
                 {
-                    System.Console.WriteLine($"Skipping temp file {filename}.");
+                    Logger.Log($"Skipping temp file {filename}.");
                     continue;
                 }
 
@@ -40,15 +41,15 @@ namespace Trucks
                     SettlementHistory settlement = Parse(filename);
                     if (settlement == null)
                     {
-                        System.Console.WriteLine($"Unable to read {filename}");
+                        Logger.Log($"Unable to read {filename}");
                         continue;
                     }
                     settlements.Add(settlement);
-                    System.Console.WriteLine($"Parsed: {filename} with {settlement.Credits.Count} credits.");            
+                    Logger.Log($"Parsed: {filename} with {settlement.Credits.Count} credits.");            
                 }
                 catch (Exception e)
                 {
-                    System.Console.WriteLine($"Unable to parse {filename}, error:\n{e}");
+                    Logger.Log($"Unable to parse {filename}, error:\n{e}");
                 }
             }
 
@@ -80,7 +81,7 @@ namespace Trucks
             }
             catch (Exception e)
             {
-                System.Console.WriteLine($"Error parsing {_filename}: Error:\n\t{e.Message}");
+                Logger.Log($"Error parsing {_filename}: Error:\n\t{e.Message}");
                 return null;
             }
         }
@@ -198,7 +199,7 @@ namespace Trucks
                         if (int.TryParse(cell.Value, out value))
                             property.SetValue(item, value);
                         else
-                            System.Console.WriteLine($"WARNING: Unable to set value {item} on {property.Name} for {cell.Value}");
+                            Logger.Log($"WARNING: Unable to set value {item} on {property.Name} for {cell.Value}");
                     }
                     else if (property.PropertyType == typeof(double))
                     {
@@ -212,7 +213,7 @@ namespace Trucks
             }    
             catch (Exception e)        
             {
-                System.Console.WriteLine($"Unable to set value {item} on {property.Name} for {cell.Value}\n\t{e.Message}");
+                Logger.Log($"Unable to set value {item} on {property.Name} for {cell.Value}\n\t{e.Message}");
             }
         }    
 

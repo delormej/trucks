@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -67,7 +68,7 @@ namespace Trucks
         /// </summary>
         public async Task<List<string>> CreateSettlementsAsync(CreateSettlementOptions options)
         {
-            System.Console.WriteLine($"Creating settlements for: {options}");
+            Logger.Log($"Creating settlements for: {options}");
 
             List<string> settlementFiles = new List<string>();
 
@@ -90,7 +91,7 @@ namespace Trucks
             }
             else
             {
-                System.Console.WriteLine($"No settlements found for the specified {options}");
+                Logger.Log($"No settlements found for the specified {options}");
             }
         
             return settlementFiles;
@@ -102,7 +103,7 @@ namespace Trucks
         /// </summary>
         public string[] UpdateHeadersFromPanther(PantherClient panther)
         {
-            System.Console.WriteLine($"Updating settlements for company: {panther.Company}.");
+            Logger.Log($"Updating settlements for company: {panther.Company}.");
             List<SettlementHistory> settlementsToUpdate = null;
 
             var task = Task.Run(async () => 
@@ -129,7 +130,7 @@ namespace Trucks
         /// </summary>
         public string[] UpdateAll()
         {
-            System.Console.WriteLine($"Updating all settlements.");
+            Logger.Log($"Updating all settlements.");
             List<SettlementHistory> savedSettlements = null;
 
             var task = Task.Run(async () => 

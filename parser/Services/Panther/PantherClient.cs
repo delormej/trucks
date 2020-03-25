@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Linq;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -77,7 +78,7 @@ namespace Trucks
             foreach (SettlementHistory settlement in settlementsToDownload)
             {
                 string xls = await DownloadSettlementReportAsync(settlement.SettlementId);
-                System.Console.WriteLine($"Downloaded {settlement.SettlementId}: {xls}");
+                Logger.Log($"Downloaded {settlement.SettlementId}: {xls}");
                 
                 yield return new KeyValuePair<string, SettlementHistory>(xls, settlement);
             }
@@ -85,7 +86,7 @@ namespace Trucks
 
         public async Task<List<SettlementHistory>> GetSettlementsAsync()
         {
-            System.Console.WriteLine($"Trying to load settlements for {_company}");
+            Logger.Log($"Trying to load settlements for {_company}");
 
             bool loggedIn = await LoginAsync();
             if (!loggedIn)

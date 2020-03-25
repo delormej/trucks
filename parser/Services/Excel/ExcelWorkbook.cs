@@ -1,10 +1,10 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -192,7 +192,7 @@ namespace Trucks
                     }
                     else
                     {
-                        System.Console.WriteLine("Unable to delete cell formula, no further details.");
+                        Logger.Log("Unable to delete cell formula, no further details.");
                     }                   
                 }
                 if (calculationCells.Count == 0)

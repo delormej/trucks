@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
-using System.Linq;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -52,7 +52,7 @@ namespace Trucks
         public async Task RunAsync()
         {
             const int MINUTES_10 = 10 * 60 * 1000; 
-            System.Console.WriteLine("Running end to end...");
+            Logger.Log("Running end to end...");
 
             EventWaitHandle ewh = new EventWaitHandle(false, EventResetMode.ManualReset);
             Finished += (o, e) => ewh.Set();
@@ -61,9 +61,9 @@ namespace Trucks
 
             if (!ewh.WaitOne(MINUTES_10))
             {
-                System.Console.WriteLine("Timeout waiting for processing of uploads.  Not all were processed?");
+                Logger.Log("Timeout waiting for processing of uploads.  Not all were processed?");
                 foreach (var upload in _uploaded)
-                    System.Console.WriteLine($"\t{upload.Company}, {upload.SettlementId}");
+                    Logger.Log($"\t{upload.Company}, {upload.SettlementId}");
             }
         }
 
@@ -73,7 +73,7 @@ namespace Trucks
         /// <summary>
         public async Task ProcessUploadedAsync()
         {
-            System.Console.WriteLine("Checking converter for files to download.");
+            Logger.Log("Checking converter for files to download.");
             Directory.CreateDirectory(ConvertedDirectory);
             IEnumerable<ZamzarResult> results = await _excelConverter.QueryAllAsync();
             List<SettlementHistory> mergedSettlements = new List<SettlementHistory>();
@@ -89,7 +89,7 @@ namespace Trucks
                 }
                 catch (Exception e)
                 {
-                    System.Console.WriteLine($"Unable to process uploaded: {result.target_files[0].name}\n{e}");
+                    Logger.Log($"Unable to process uploaded: {result.target_files[0].name}\n{e}");
                 }
             }
 
@@ -102,7 +102,7 @@ namespace Trucks
         /// </summary>
         public void ProcessLocal(string directory = null)
         {
-            System.Console.WriteLine("Processing local converted xlsx files.");
+            Logger.Log("Processing local converted xlsx files.");
             if (directory == null)
                 directory = ConvertedDirectory;
 
@@ -111,7 +111,7 @@ namespace Trucks
 
             if (downloadedSettlements.Count == 0)
             {
-                System.Console.WriteLine($"No local settlements found to process.");
+                Logger.Log($"No local settlements found to process.");
                 return;
             }
 
@@ -138,7 +138,7 @@ namespace Trucks
                     }
                     catch (Exception e)
                     {
-                        System.Console.WriteLine($"Unable to download missing settlements\n:{e}");
+                        Logger.Log($"Unable to download missing settlements\n:{e}");
                     }
                 }));
             }
@@ -163,9 +163,9 @@ namespace Trucks
             if (!File.Exists(filename))
             {
                 if (await _excelConverter.DownloadAsync(fileId, filename))
-                    System.Console.WriteLine($"Downloaded: {filename}");
+                    Logger.Log($"Downloaded: {filename}");
                 else
-                    System.Console.WriteLine($"Unable to download {filename}");
+                    Logger.Log($"Unable to download {filename}");
             }
 
             return filename;
@@ -178,7 +178,7 @@ namespace Trucks
                 SettlementRepository repository = new SettlementRepository();
                 repository.SaveSettlements(settlements);
             
-                System.Console.WriteLine($"Saved {settlements.Count} settlements.");
+                Logger.Log($"Saved {settlements.Count} settlements.");
             }
 
             OnFinished();
@@ -199,7 +199,7 @@ namespace Trucks
                 e.Job.Result = await _excelConverter.UploadAsync(e.Job.SourceXls);
                 _uploaded.Add(e.Job);
                 
-                System.Console.WriteLine($"New Settlement uploaded for conversion: {e.Job.SettlementId}");
+                Logger.Log($"New Settlement uploaded for conversion: {e.Job.SettlementId}");
 
                 SetCheckForDownload();
             }).Wait();
@@ -207,7 +207,7 @@ namespace Trucks
 
         private void OnCheckForDownload(object state)
         {
-            System.Console.WriteLine("Processing files already uploaded to converter.");
+            Logger.Log("Processing files already uploaded to converter.");
             ProcessUploadedAsync().Wait();
         }
 
@@ -255,7 +255,7 @@ namespace Trucks
                 // Get the additional header context from panther.
                 if (!_settlementService.SettlementHeaders.ContainsCompany(settlement.CompanyId))
                 {
-                    System.Console.WriteLine($"Settlement {settlement.SettlementId} not found, trying to load from Panther.");
+                    Logger.Log($"Settlement {settlement.SettlementId} not found, trying to load from Panther.");
                     
                     LoadFromPanther(settlement.CompanyId.ToString());
                     header = _settlementService.SettlementHeaders?

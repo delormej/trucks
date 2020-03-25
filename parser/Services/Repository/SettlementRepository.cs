@@ -1,9 +1,9 @@
 using System;
-using System.Configuration;
 using System.Collections.Generic;
 using System.Linq;
 using Azure.Cosmos;
 using System.Threading.Tasks;
+using jasondel.Tools;
 
 namespace Trucks
 {
@@ -49,7 +49,7 @@ namespace Trucks
                 }
                 catch (Exception e)
                 {
-                    System.Console.WriteLine($"Error occurred while retrieving SettlementHistory for weeks: {weekNumbers}:\n\t" +
+                    Logger.Log($"Error occurred while retrieving SettlementHistory for weeks: {weekNumbers}:\n\t" +
                         e.Message);
                     return null;
                 }
@@ -70,11 +70,11 @@ namespace Trucks
                         task.Wait();
                         if (task.Exception != null)
                             throw task.Exception;
-                        System.Console.WriteLine($"Saved settlement id: {settlement.SettlementId}.");
+                        Logger.Log($"Saved settlement id: {settlement.SettlementId}.");
                     }
                     catch (Exception e)
                     {
-                        System.Console.WriteLine(
+                        Logger.Log(
                             $"Error atempting to save settlement: {settlement.id} to database.\n\t{e.Message}");
                     }
                 }
@@ -93,7 +93,7 @@ namespace Trucks
             }
             catch (Exception e)
             {
-                System.Console.WriteLine($"Error attempting to write settlement {settlement.SettlementId} to CosmosDb\n\t"+ e.Message);
+                Logger.Log($"Error attempting to write settlement {settlement.SettlementId} to CosmosDb\n\t"+ e.Message);
                 throw e;
             }
         } 
@@ -120,7 +120,7 @@ namespace Trucks
             }
             catch (Exception e)
             {
-                System.Console.WriteLine($"Error occurred while retrieving {itemName} with {settlementId}:\n\t" +
+                Logger.Log($"Error occurred while retrieving {itemName} with {settlementId}:\n\t" +
                     e.Message);
                 return null;
             }
@@ -146,7 +146,7 @@ namespace Trucks
             Container container = cosmosClient.GetContainer(databaseId, typeof(SettlementHistory).Name);
             PartitionKey partitionKey = new PartitionKey(settlement.CompanyId);
             await container.DeleteItemAsync<SettlementHistory>(settlement.SettlementId, partitionKey);
-            System.Console.WriteLine($"Deleted: {settlement.SettlementId}");
+            Logger.Log($"Deleted: {settlement.SettlementId}");
         }
 
         protected override async Task CreateContainerAsync()

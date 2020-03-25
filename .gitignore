@@ -6,3 +6,4 @@ packages
 .vscode
 .gitignore
 *.xls*
+appsettings.json
