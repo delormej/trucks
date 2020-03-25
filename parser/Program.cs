@@ -29,7 +29,6 @@ Next big things:
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 
 namespace Trucks
 {
@@ -39,28 +38,13 @@ namespace Trucks
         {
             ShowUsage(args);
 
-            IConfiguration config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json")
-                .Build();
-            ParserConfiguration parserConfig = new ParserConfiguration();
-            config.Bind("parser", parserConfig);
-
-            string company = Environment.GetEnvironmentVariable("TRUCKCOMPANY");
-            string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD");
+            ParserConfiguration parserConfig = ParserConfiguration.Load();
             string convertApiKey = parserConfig.ZamzarKey;
-
-            if (string.IsNullOrWhiteSpace(convertApiKey))
-            {
-                System.Console.WriteLine("Must set TRUCKCOMPANY, TRUCKPASSWORD, ZAMZARKEY env variables.");
-                return;
-            }
             
-            PantherClient panther = new PantherClient(company, password);
             SettlementService settlementService = new SettlementService();
             SettlementOrchestrator orchestrator = new SettlementOrchestrator(
-                config,
-                settlementService,
-                new ExcelConverter(convertApiKey));
+                parserConfig,
+                settlementService);
 
             if (args.Length < 1)
                 Process(orchestrator);
@@ -74,7 +58,7 @@ namespace Trucks
                 else if (command == "downloaded")
                     orchestrator.ProcessLocal();
                 else if (command == "update")
-                    settlementService.UpdateHeadersFromPanther(panther);
+                    UpdateHeaders(settlementService);
                 else if (command == "updateall")
                     settlementService.UpdateAll();                    
                 else if (command == "report")
@@ -198,6 +182,14 @@ namespace Trucks
                 await converter.DeleteAsync(result.id);
                 System.Console.WriteLine($"Deleted {result.target_files[0].name}");
             }
+        }
+
+        private static void UpdateHeaders(SettlementService settlementService)
+        {
+            string company = Environment.GetEnvironmentVariable("TRUCKCOMPANY");
+            string password = Environment.GetEnvironmentVariable("TRUCKPASSWORD");
+            PantherClient panther = new PantherClient(company, password);                    
+            settlementService.UpdateHeadersFromPanther(panther);            
         }
 
         private static void ShowUsage(string[] args)

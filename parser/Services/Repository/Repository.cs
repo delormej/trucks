@@ -9,12 +9,17 @@ namespace Trucks
 {
     public abstract class Repository
     {
-        private const string endpointUrl = "https://trucksdb.documents.azure.com:443/";
-        private string authorizationKey = Environment.GetEnvironmentVariable("TRUCKDBKEY");
-        protected string databaseId = "trucksdb";
+        private readonly string endpointUrl;
+        private readonly string authorizationKey;
+        protected readonly string databaseId;
 
         public Repository()
         {
+            ParserConfiguration parserConfig = ParserConfiguration.Load();
+            authorizationKey = parserConfig.Database.CosmosDbKey;
+            endpointUrl = parserConfig.Database.EndPointUrl;
+            databaseId = parserConfig.Database.DatabaseId;
+
             if (authorizationKey == null)
                 throw new ApplicationException("Must set TRUCKDBKEY environment variable with authorization key for CosmosDb.");
         }

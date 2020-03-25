@@ -36,13 +36,12 @@ namespace Trucks
             }
         }
 
-        public SettlementOrchestrator(IConfiguration config, SettlementService settlementService, ExcelConverter excelConverter)
+        public SettlementOrchestrator(ParserConfiguration config, SettlementService settlementService)
         {
-            _config = new ParserConfiguration();
-            config.Bind("parser", _config);
+            _config = config;
 
             _uploaded = new List<ConversionJob>();
-            _excelConverter = excelConverter;
+            _excelConverter = new ExcelConverter(_config.ZamzarKey);
             _settlementService = settlementService;
             _settlementService.OnNewSettlement += OnNewSettlement;
         }
