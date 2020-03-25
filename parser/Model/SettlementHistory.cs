@@ -71,5 +71,13 @@ namespace Trucks
             
             return drivers;
         }
+
+        public static IEnumerable<string> GetDrivers(this SettlementHistory settlement)
+        {
+            IEnumerable<string> drivers = settlement.Credits
+                    .Select(c => c.Driver).Distinct();                
+            
+            return drivers;
+        }        
     }    
 }

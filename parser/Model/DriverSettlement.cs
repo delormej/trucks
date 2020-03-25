@@ -13,6 +13,7 @@ namespace Trucks
         public int Year { get; set; }
         public DateTime DriverSettlementDate { get; set; }
         public double FuelCharges { get; set; }
+        public double OccupationalInsurance { get; set; }
         public IEnumerable<Credit> Credits { get; set; }
         public IEnumerable<Deduction> Deductions { get; set; }        
     }

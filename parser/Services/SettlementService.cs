@@ -174,5 +174,25 @@ namespace Trucks
 
             return settlementsToDownload;            
         }        
+
+        /// <summary>
+        /// Creates DriverSettlements model objects for each driver for each week.
+        /// </summary>
+        public List<DriverSettlement> CreateDriverSettlements(List<SettlementHistory> settlements)
+        {
+            Logger.Log($"Creating DriverSettlements for {settlements.Count} settlement(s).");
+            
+            List<DriverSettlement> driverSettlements = new List<DriverSettlement>();
+            foreach (var settlement in settlements)
+            {
+                DriverSettlementGenerator generator = new DriverSettlementGenerator(settlement);
+                foreach (var driver in settlement.GetDrivers())
+                {
+                    driverSettlements.Add(generator.Create(driver));
+                }
+            }
+
+            return driverSettlements;
+        }
     }
 }
