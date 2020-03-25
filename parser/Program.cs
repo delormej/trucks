@@ -82,21 +82,13 @@ namespace Trucks
                 else if (command == "settlement")
                     CreateSettlements(settlementService, args);
                 else if (command == "fixtemplate")
-                {
                     FixTemplate(args[1]);
-                }
                 else if (command == "savefuel")
-                {
                     SaveFuelCharges(args[1]);
-                }       
                 else if (command == "get")
-                {
                     PrintSettlementHeader(args[1], args[2]);
-                }
                 else if (command == "purge")
-                {
                     PurgeConvertedAsync(parserConfig.ZamzarKey).Wait();
-                }
             }
         }
 

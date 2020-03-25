@@ -132,8 +132,15 @@ namespace Trucks
             {
                 tasks.Add(Task.Run( async () => 
                 {
-                    PantherClient panther = new PantherClient(pantherConfig.Company, pantherConfig.Password);
-                    await _settlementService.DownloadMissingSettlements(panther);   
+                    try
+                    {
+                        PantherClient panther = new PantherClient(pantherConfig.Company, pantherConfig.Password);
+                        await _settlementService.DownloadMissingSettlements(panther);   
+                    }
+                    catch (Exception e)
+                    {
+                        System.Console.WriteLine($"Unable to download missing settlements\n:{e}");
+                    }
                 }));
             }
 
