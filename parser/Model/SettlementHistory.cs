@@ -72,12 +72,25 @@ namespace Trucks
             return drivers;
         }
 
-        public static IEnumerable<string> GetDrivers(this SettlementHistory settlement)
+        public static IEnumerable<string> GetDrivers(this SettlementHistory settlement, int? truckid)
         {
             IEnumerable<string> drivers = settlement.Credits
-                    .Select(c => c.Driver).Distinct();                
+                .Where(c => truckid != null ? c.TruckId == truckid : true)
+                .Select(c => c.Driver).Distinct();                
             
             return drivers;
         }        
+
+        public static int GetTruckId(this SettlementHistory settlement, string driver)
+        {
+            return settlement.Credits.Where(c => c.Driver == driver).FirstOrDefault().TruckId;
+        }
+
+        public static int[] GetTruckIds(this SettlementHistory settlement, string driver)
+        {
+            int[] ids = settlement.Credits.Where(c => c.Driver == driver)
+                .Select(c => c.TruckId).Distinct().ToArray();
+            return ids;
+        }
     }    
 }

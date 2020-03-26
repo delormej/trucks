@@ -46,21 +46,16 @@ namespace Trucks
             Logger.Log($"Creating settlements for: {options}");
 
             List<string> settlementFiles = new List<string>();
-
-            FuelChargeRepository fuelRepository = new FuelChargeRepository(options.Year, options.Weeks);
-            SettlementRepository settlementRepository = new SettlementRepository();    
-            List<SettlementHistory> settlements = await 
-                settlementRepository.GetSettlementsByWeekAsync(options.Year, options.Weeks);
+            List<SettlementHistory> settlements = await GetSettlementsAsync(options);
 
             if (settlements.Count() > 0)
             {
-                if (options.TruckId > 0)
-                    settlements = settlements.FilterSettlementsByTruck(options.TruckId).ToList();
+                List<DriverSettlement> driverSettlements = GetDriverSettlements(settlements, options.TruckId);
 
-                SettlementWorkbookGenerator generator = new SettlementWorkbookGenerator(settlements, fuelRepository);
                 foreach (string driver in settlements.GetDrivers(options.TruckId))
                 {
-                    string file = generator.Generate(options.Year, options.Weeks, driver);
+                    Logger.Log($"Creating settlement workbook for {driver}");
+                    string file = SettlementWorkbookFactory.Create(driverSettlements.GetByDriver(driver));
                     settlementFiles.Add(file);
                 }
             }
@@ -70,6 +65,30 @@ namespace Trucks
             }
         
             return settlementFiles;
+        }
+
+        private async Task<List<SettlementHistory>> GetSettlementsAsync(CreateSettlementOptions options)
+        {
+            SettlementRepository settlementRepository = new SettlementRepository();    
+            List<SettlementHistory> settlements = await 
+                settlementRepository.GetSettlementsByWeekAsync(options.Year, options.Weeks);
+
+            if (options.TruckId > 0)
+                settlements = settlements.FilterSettlementsByTruck(options.TruckId).ToList();
+
+            return settlements;            
+        }
+
+        private List<DriverSettlement> GetDriverSettlements(IEnumerable<SettlementHistory> settlements, int truckId)
+        {
+            List<DriverSettlement> driverSettlements = new List<DriverSettlement>();
+            foreach (var settlement in settlements)
+            {
+                DriverSettlementFactory settlementFactory = new DriverSettlementFactory(settlement);
+                foreach (string driver in settlement.GetDrivers(truckId))
+                    driverSettlements.Add(settlementFactory.Create(driver));
+            }
+            return driverSettlements;
         }
 
         /// <summary>
@@ -185,8 +204,8 @@ namespace Trucks
             List<DriverSettlement> driverSettlements = new List<DriverSettlement>();
             foreach (var settlement in settlements)
             {
-                DriverSettlementGenerator generator = new DriverSettlementGenerator(settlement);
-                foreach (var driver in settlement.GetDrivers())
+                DriverSettlementFactory generator = new DriverSettlementFactory(settlement);
+                foreach (var driver in settlement.GetDrivers(null))
                 {
                     driverSettlements.Add(generator.Create(driver));
                 }

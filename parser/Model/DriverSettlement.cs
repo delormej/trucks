@@ -8,6 +8,7 @@ namespace Trucks
         public DriverSettlement() {}
 
         public string Driver { get; set; }
+        public int CompanyId { get; set; }
         public int TruckId { get; set; }
         public int WeekId { get; set; }
         public int Year { get; set; }
