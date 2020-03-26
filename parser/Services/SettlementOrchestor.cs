@@ -212,6 +212,20 @@ namespace Trucks
             }).Wait();
         }
 
+        /// <summary> 
+        /// Kicks off a timer, on elapsed it checks for downloads on excel converter service.
+        /// </summary>
+        private void SetCheckForDownload()
+        {
+            const int MINUTES_3 = 3 * 60 * 1000; 
+            // Set a timer , on expiration of that timer check for available downloads.
+            if (_checkForDownloadTimer == null)
+                _checkForDownloadTimer = new Timer(OnCheckForDownload, null, MINUTES_3, Timeout.Infinite);
+            else
+            // Change to 3 minutes from the last time this is called.
+                _checkForDownloadTimer.Change(MINUTES_3, Timeout.Infinite);
+        }
+
         private void OnCheckForDownload(object state)
         {
             Logger.Log("Processing files already uploaded to converter.");
@@ -235,20 +249,6 @@ namespace Trucks
         {
             if(Finished != null)
                 Finished(this, null);            
-        }
-
-        /// <summary> 
-        /// Kicks off a timer, on elapsed it checks for downloads on excel converter service.
-        /// </summary>
-        private void SetCheckForDownload()
-        {
-            const int MINUTES_3 = 3 * 60 * 1000; 
-            // Set a timer , on expiration of that timer check for available downloads.
-            if (_checkForDownloadTimer == null)
-                _checkForDownloadTimer = new Timer(OnCheckForDownload, null, MINUTES_3, Timeout.Infinite);
-            else
-            // Change to 3 minutes from the last time this is called.
-                _checkForDownloadTimer.Change(MINUTES_3, Timeout.Infinite);
         }
 
         private object _pantherLock = new Object();
