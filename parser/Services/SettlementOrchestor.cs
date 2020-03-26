@@ -173,17 +173,21 @@ namespace Trucks
 
         private void SaveSettlements(List<SettlementHistory> settlements)
         {
-            if (settlements.Count > 0)
+            if (settlements.Count == 0)
             {
-                SettlementRepository repository = new SettlementRepository();
-                repository.SaveSettlements(settlements);
-                Logger.Log($"Saved {settlements.Count} settlements.");
-
-                List<DriverSettlement> driverSettlements = 
-                    _settlementService.CreateDriverSettlements(settlements);
-                repository.SaveDriverSettlements(driverSettlements);
+                Logger.Log("No settlements to save.");
+                return;
             }
 
+            SettlementRepository repository = new SettlementRepository();
+            repository.SaveSettlements(settlements);
+            Logger.Log($"Saved {settlements.Count} settlements.");
+
+            List<DriverSettlement> driverSettlements = DriverSettlementFactory
+                .CreateDriverSettlements(settlements);
+            repository.SaveDriverSettlements(driverSettlements);
+            Logger.Log($"Saved {driverSettlements.Count} driver settlement(s).");
+            
             OnFinished();
         }
 

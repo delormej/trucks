@@ -10,6 +10,27 @@ namespace Trucks
     /// </summary>
     public class DriverSettlementFactory
     {
+        /// <summary>
+        /// Creates DriverSettlements model objects for each driver for each week.
+        /// </summary>
+        public static List<DriverSettlement> CreateDriverSettlements(IEnumerable<SettlementHistory> settlements, int? truckId = null)
+        {
+            Logger.Log($"Creating DriverSettlements for {settlements.Count()} settlement(s).");
+            
+            if (truckId != null)
+                settlements = settlements.FilterByTruck((int)truckId);
+
+            List<DriverSettlement> driverSettlements = new List<DriverSettlement>();
+            foreach (var settlement in settlements)
+            {
+                DriverSettlementFactory generator = new DriverSettlementFactory(settlement);
+                foreach (var driver in settlement.GetDrivers(null))
+                    driverSettlements.Add(generator.Create(driver));
+            }
+
+            return driverSettlements;
+        }
+
         private SettlementHistory _settlement;
         private FuelChargeRepository _fuelRepository;
         private int _week, _year;
@@ -93,7 +114,7 @@ namespace Trucks
                 throw new ApplicationException($"Settlement date must be a Friday: {_settlement.SettlementDate}");            
             return sheetSettlementDate;
         }
-    }
+   }
 
     public static class DriverSettlementExtensions
     {

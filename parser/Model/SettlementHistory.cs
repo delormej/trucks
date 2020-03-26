@@ -52,7 +52,7 @@ namespace Trucks
             return settlements.Count(s => s.CompanyId == companyId) > 0;
         }
  
-         public static IEnumerable<SettlementHistory> FilterSettlementsByTruck(
+         public static IEnumerable<SettlementHistory> FilterByTruck(
                 this IEnumerable<SettlementHistory> settlements, int truckid)
         {
             return settlements.Where(

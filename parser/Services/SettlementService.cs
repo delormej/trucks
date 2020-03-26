@@ -50,7 +50,8 @@ namespace Trucks
 
             if (settlements.Count() > 0)
             {
-                List<DriverSettlement> driverSettlements = GetDriverSettlements(settlements, options.TruckId);
+                List<DriverSettlement> driverSettlements = DriverSettlementFactory
+                    .CreateDriverSettlements(settlements, options.TruckId);
 
                 foreach (string driver in settlements.GetDrivers(options.TruckId))
                 {
@@ -67,28 +68,16 @@ namespace Trucks
             return settlementFiles;
         }
 
-        private async Task<List<SettlementHistory>> GetSettlementsAsync(CreateSettlementOptions options)
+        public async Task<List<SettlementHistory>> GetSettlementsAsync(CreateSettlementOptions options)
         {
             SettlementRepository settlementRepository = new SettlementRepository();    
             List<SettlementHistory> settlements = await 
                 settlementRepository.GetSettlementsByWeekAsync(options.Year, options.Weeks);
 
             if (options.TruckId > 0)
-                settlements = settlements.FilterSettlementsByTruck(options.TruckId).ToList();
+                settlements = settlements.FilterByTruck(options.TruckId).ToList();
 
             return settlements;            
-        }
-
-        private List<DriverSettlement> GetDriverSettlements(IEnumerable<SettlementHistory> settlements, int truckId)
-        {
-            List<DriverSettlement> driverSettlements = new List<DriverSettlement>();
-            foreach (var settlement in settlements)
-            {
-                DriverSettlementFactory settlementFactory = new DriverSettlementFactory(settlement);
-                foreach (string driver in settlement.GetDrivers(truckId))
-                    driverSettlements.Add(settlementFactory.Create(driver));
-            }
-            return driverSettlements;
         }
 
         /// <summary>
@@ -193,25 +182,5 @@ namespace Trucks
 
             return settlementsToDownload;            
         }        
-
-        /// <summary>
-        /// Creates DriverSettlements model objects for each driver for each week.
-        /// </summary>
-        public List<DriverSettlement> CreateDriverSettlements(List<SettlementHistory> settlements)
-        {
-            Logger.Log($"Creating DriverSettlements for {settlements.Count} settlement(s).");
-            
-            List<DriverSettlement> driverSettlements = new List<DriverSettlement>();
-            foreach (var settlement in settlements)
-            {
-                DriverSettlementFactory generator = new DriverSettlementFactory(settlement);
-                foreach (var driver in settlement.GetDrivers(null))
-                {
-                    driverSettlements.Add(generator.Create(driver));
-                }
-            }
-
-            return driverSettlements;
-        }
     }
 }
