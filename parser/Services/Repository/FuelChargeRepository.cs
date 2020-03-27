@@ -14,39 +14,32 @@ namespace Trucks
     public class FuelChargeRepository : Repository
     {
         private int _year;
-        private int[] _weeks;
+        private int _week;
         private List<FuelCharge> _charges;
         private Task _loading;
 
         public IEnumerable<FuelCharge> Charges { get { return _charges; }}
 
-        public FuelChargeRepository() 
+        private FuelChargeRepository() 
         {
         }
 
-        public FuelChargeRepository(int year, int[] weeks)
+        public FuelChargeRepository(int year, int week)
         {
             _year = year;
-            _weeks = weeks;
+            _week = week;
 
             // Lazy load the fuel charges.
             _loading = GetFuelChargesAsync();
         }
 
-        public double GetFuelCharges(int year, int week, int truckId)
+        public double GetFuelCharges(int truckId)
         {
             _loading.Wait();
-
             string truck = truckId.ToString();
-            double fuel = _charges.Where(c => c.TruckId == truck && c.WeekNumber == week).Sum(c => c.NetCost);
+            double fuel = _charges.Where(c => c.TruckId == truck && c.WeekNumber == _week).Sum(c => c.NetCost);
             
             return fuel;
-        }
-
-        public async Task LoadAsync(string filename)
-        {
-            _loading = ReadFromFileAsync(filename);   
-            await _loading;
         }
 
         /// <summary>
@@ -71,40 +64,39 @@ namespace Trucks
             }
         }
 
-        public async Task SaveAsync(string file)
+        public static async Task SaveAsync(string file)
         {
             Logger.Log($"Saving {file} fuel charges to database.");
+            List<FuelCharge> charges = await ReadFromFileAsync(file);
 
-            // Run these async.
-            await Task.WhenAll(
-                LoadAsync(file),
-                EnsureDatabaseAsync()
-            );
-            await SaveAsync(Charges);
-            Logger.Log($"Saved {Charges?.Count()} charge(s).");
+            FuelChargeRepository repo = new FuelChargeRepository();
+            await repo.SaveAsync(charges);
+            Logger.Log($"Saved {charges?.Count()} charge(s).");
         }
 
-        private Task ReadFromFileAsync(string filename)
+        private static async Task<List<FuelCharge>> ReadFromFileAsync(string filename)
         {
-            return Task.Run( () => {
-                string csv = File.ReadAllText(filename);
-                StringBuilder sb = new StringBuilder();
-                using (var p = ChoCSVReader.LoadText(csv)
-                    .WithFirstLineHeader()
-                    )
-                {
-                    using (var w = new ChoJSONWriter(sb))
-                        w.Write(p);
-                }
 
-                _charges = JsonConvert.DeserializeObject<List<FuelCharge>>(sb.ToString());
-                });
+            string csv = await File.ReadAllTextAsync(filename);
+            StringBuilder sb = new StringBuilder();
+            using (var p = ChoCSVReader.LoadText(csv)
+                .WithFirstLineHeader()
+                )
+            {
+                using (var w = new ChoJSONWriter(sb))
+                    w.Write(p);
+            }
+
+            List<FuelCharge> charges = JsonConvert.DeserializeObject<List<FuelCharge>>(sb.ToString());
+
+            return charges;
         }
 
         private async Task GetFuelChargesAsync()
         {
+            Logger.Log($"Loading fuel charges for week {_week}.");
             string sqlQueryText = $"SELECT * FROM FuelCharge c";
-            sqlQueryText += $" WHERE c.Year = {_year} AND c.WeekNumber IN ({string.Join(',', _weeks)})";
+            sqlQueryText += $" WHERE c.Year = {_year} AND c.WeekNumber = {_week}";
             
             _charges = new List<FuelCharge>();
 
@@ -117,6 +109,8 @@ namespace Trucks
                     container.GetItemQueryIterator<FuelCharge>(queryDefinition))
                         _charges.Add(item);
             }
+
+            Logger.Log($"Loaded {_charges.Count} fuel charges for week {_week}.");
         }
 
         protected override async Task CreateContainerAsync()

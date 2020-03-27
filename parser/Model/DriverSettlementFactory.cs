@@ -41,9 +41,9 @@ namespace Trucks
 
         public DriverSettlementFactory(SettlementHistory settlement)
         {
-            _fuelRepository = new FuelChargeRepository();
             _settlement = settlement;
             Tools.GetWeekNumber(_settlement.SettlementDate, out _week, out _year);
+            _fuelRepository = new FuelChargeRepository(_year, _week);
         }
 
         /// <summary>
@@ -92,8 +92,16 @@ namespace Trucks
 
         private double GetFuelCharges(int truck) 
         {
+            double fuel = 0;
             /* TODO: -- this needs to come from  driver ss# */
-            double fuel = _fuelRepository.GetFuelCharges(_year, _week, truck);
+            try
+            {
+                fuel = _fuelRepository.GetFuelCharges(truck);
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"Unable to get fuel charges for {truck}.\n\t{e.Message}");
+            }
             return fuel;
         }
 
@@ -122,7 +130,8 @@ namespace Trucks
         {
             DateTime sheetSettlementDate = _settlement.SettlementDate.AddDays(7);
             if (sheetSettlementDate.DayOfWeek != DayOfWeek.Friday)
-                throw new ApplicationException($"Settlement date must be a Friday: {_settlement.SettlementDate}");            
+                //throw new ApplicationException($"Settlement date must be a Friday: {_settlement.SettlementDate}");            
+                Logger.Log($"WARNING: {_settlement.SettlementId} Settlement SHOULD be a Friday: {_settlement.SettlementDate}");
             return sheetSettlementDate;
         }
    }

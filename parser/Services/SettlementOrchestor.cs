@@ -218,7 +218,7 @@ namespace Trucks
                 tasks.Add(_settlementService.LoadSettlementsAsync(panther));
             }
             if (tasks.Count > 0) 
-                Task.WhenAll(tasks);            
+                Task.WhenAll(tasks).Wait();            
         }
 
         private bool HasUploads()

@@ -148,9 +148,7 @@ namespace Trucks
         private static void SaveFuelCharges(string file)
         {
             Logger.Log($"Saving {file} fuel charges to database.");
-            FuelChargeRepository repository = new FuelChargeRepository();
-            repository.SaveAsync(file).Wait();
-            Logger.Log($"Saved {repository.Charges?.Count()} charge(s).");
+            FuelChargeRepository.SaveAsync(file).Wait();
         }
 
         private static void PrintSettlementHeader(string settlementId, string companyId)

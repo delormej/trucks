@@ -54,7 +54,7 @@ namespace Trucks
 
         public static int[] GetCompanies(this List<SettlementHistory> settlements)
         {
-            return settlements.Select(s => s.CompanyId).Distinct().ToArray();
+            return settlements?.Select(s => s.CompanyId).Distinct().ToArray();
         }
  
          public static IEnumerable<SettlementHistory> FilterByTruck(
