@@ -84,6 +84,11 @@ namespace Trucks
 
         public void SaveDriverSettlements(List<DriverSettlement> settlements)
         {
+            string ts = DateTime.Now.ToString("yyyymmddhhMMss");
+            string file = $"DriverSettlements-{ts}.json";
+            var json = System.Text.Json.JsonSerializer.Serialize(settlements);
+            System.IO.File.CreateText(file);
+            Logger.Log($"Wrote DriverSettlements to {file}");
             return;
         }
 
