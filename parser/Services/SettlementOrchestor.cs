@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
+using System.Linq;
 using jasondel.Tools;
 
 namespace Trucks
@@ -76,24 +77,29 @@ namespace Trucks
             Logger.Log("Checking converter for files to download.");
             Directory.CreateDirectory(ConvertedDirectory);
             IEnumerable<ZamzarResult> results = await _excelConverter.QueryAllAsync();
-            List<SettlementHistory> mergedSettlements = new List<SettlementHistory>();
+            List<SettlementHistory> settlements = new List<SettlementHistory>();
 
+            // Process all these concurrently.
+            List<Task> tasks = new List<Task>();
             foreach (ZamzarResult result in results)
+                tasks.Add(ParseResultAsync(result));
+            await Task.WhenAll(tasks);
+
+            SaveLocalSettlements(settlements);
+
+            async Task ParseResultAsync(ZamzarResult result)
             {
                 try
                 {
                     string filename = await DownloadFromConverterAsync(result);
-                    SettlementHistory settlement = 
-                        MergeHeader(SettlementHistoryParser.Parse(filename));
-                    mergedSettlements.Add(settlement);
+                    SettlementHistory settlement = SettlementHistoryParser.Parse(filename);
+                    settlements.Add(settlement);
                 }
                 catch (Exception e)
                 {
                     Logger.Log($"Unable to process uploaded: {result.target_files[0].name}\n{e}");
                 }
             }
-
-            SaveSettlements(mergedSettlements);
         }
 
         /// <summary>
@@ -115,12 +121,7 @@ namespace Trucks
                 return;
             }
 
-            List<SettlementHistory> mergedSettlements = new List<SettlementHistory>();
-
-            foreach (var settlement in downloadedSettlements)
-                mergedSettlements.Add(MergeHeader(settlement));
-
-            SaveSettlements(mergedSettlements);
+            SaveLocalSettlements(downloadedSettlements);
         }
 
         private async Task DownloadSettlementsAsync()
@@ -169,15 +170,20 @@ namespace Trucks
             }
 
             return filename;
-        }        
+        }    
 
-        private void SaveSettlements(List<SettlementHistory> settlements)
+        private void SaveLocalSettlements(List<SettlementHistory> settlements)
         {
+            LoadSettlements(settlements.GetCompanies());
+            List<SettlementHistory> mergedSettlements = _settlementService.MergeHeaders(settlements);
+
+
             if (settlements.Count == 0)
             {
                 Logger.Log("No settlements to save.");
                 return;
             }
+
 
             SettlementRepository repository = new SettlementRepository();
             repository.SaveSettlements(settlements);
@@ -189,6 +195,19 @@ namespace Trucks
             Logger.Log($"Saved {driverSettlements.Count} driver settlement(s).");
             
             OnFinished();
+        }
+
+        private void LoadSettlements(string[] companies)
+        {
+            List<Task> tasks = new List<Task>();
+            foreach (string company in companies)
+            {
+                var config = _config.Panther.Where(c => c.Company == company).FirstOrDefault();
+                PantherClient panther = new PantherClient(company, config.Password);
+                tasks.Add(_settlementService.LoadSettlementsAsync(panther));
+            }
+            if (tasks.Count > 0) 
+                Task.WhenAll(tasks);            
         }
 
         private bool HasUploads()
@@ -249,53 +268,6 @@ namespace Trucks
         {
             if(Finished != null)
                 Finished(this, null);            
-        }
-
-        private object _pantherLock = new Object();
-        private SettlementHistory GetHeader(SettlementHistory settlement)
-        {
-            SettlementHistory header = _settlementService.SettlementHeaders?
-                    .FindSettlementById(settlement.SettlementId);
-            
-            if (header == null)
-            {
-                // Get the additional header context from panther.
-                if (!_settlementService.SettlementHeaders.ContainsCompany(settlement.CompanyId))
-                {
-                    Logger.Log($"Settlement {settlement.SettlementId} not found, trying to load from Panther.");
-                    
-                    LoadFromPanther(settlement.CompanyId.ToString());
-                    header = _settlementService.SettlementHeaders?
-                        .FindSettlementById(settlement.SettlementId);   
-                }
-            }
-            
-            return header;
-        }
-
-        private void LoadFromPanther(string company)
-        {
-            string password = _config.GetPantherPassword(company);
-
-            lock(_pantherLock)
-            {
-                PantherClient panther = new PantherClient(company, password);
-                panther.GetSettlementsAsync().ContinueWith( (t) => 
-                    _settlementService.SettlementHeaders.AddRange(t.Result)
-                ).Wait();
-            }
-        }
-
-        private SettlementHistory MergeHeader(SettlementHistory settlement)
-        {
-            SettlementHistory header = GetHeader(settlement);
-            if (header == null)
-                throw new ApplicationException($"Cannot find header for {settlement.SettlementId}");
-
-            header.Credits = settlement.Credits;
-            header.Deductions = settlement.Deductions;
-
-            return header;            
         }
     }
 }

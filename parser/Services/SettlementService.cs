@@ -35,7 +35,7 @@ namespace Trucks
             _settlementHeaders = new List<SettlementHistory>();
         }
 
-        public List<SettlementHistory> SettlementHeaders { get { return _settlementHeaders; } }
+        private List<SettlementHistory> SettlementHeaders { get { return _settlementHeaders; } }
 
         /// <summary>
         /// Creates Excel settlement files for the specified options from existing settlement history stored
@@ -160,7 +160,7 @@ namespace Trucks
             SettlementHistoryComparer comparer = new SettlementHistoryComparer();
 
             var repoTask = repository.GetSettlementsAsync();
-            var pantherTask = panther.GetSettlementsAsync();
+            var pantherTask = LoadSettlementsAsync(panther);
 
             await Task.WhenAll(repoTask, pantherTask);
 
@@ -169,9 +169,6 @@ namespace Trucks
             
             if (settlements == null)
                 throw new ApplicationException("No settlements found on Panther!");
-            
-            // Add, but don't duplicate.
-            _settlementHeaders.AddRange(settlements.Except(_settlementHeaders, comparer));
 
             // Don't try to convert settlements we've already persisted.
             List<SettlementHistory> settlementsToDownload = 
@@ -181,6 +178,49 @@ namespace Trucks
                     .ToList();
 
             return settlementsToDownload;            
-        }        
+        }       
+
+        /// <summary>
+        /// Loads settlements from Panther, updates local cache.
+        /// </summary>
+        public async Task<List<SettlementHistory>> LoadSettlementsAsync(PantherClient panther)
+        {
+            if (_settlementHeaders.ContainsCompany(int.Parse(panther.Company)))
+            {
+                Logger.Log($"Already have settlements cached for {panther.Company}");
+                return null;
+            }
+
+            SettlementHistoryComparer comparer = new SettlementHistoryComparer();
+            var settlements = await panther.GetSettlementsAsync();
+            // Add, but don't duplicate.
+            _settlementHeaders.AddRange(settlements.Except(_settlementHeaders, comparer));
+            
+            return settlements;
+        }
+
+        /// <summary>
+        /// Combines the "body" settlement, often loaded from file containing credits and deductions
+        /// with more detailed metadata which is often obtained from the Panther site.
+        /// Returns a complete settlement.
+        /// </summary>
+        public List<SettlementHistory> MergeHeaders(List<SettlementHistory> settlements)
+        {
+            List<SettlementHistory> mergedSettlements = new List<SettlementHistory>();
+            foreach (SettlementHistory body in settlements)
+            {
+                SettlementHistory settlement = _settlementHeaders?.FindSettlementById(body.SettlementId);
+                if (settlement == null)
+                    Logger.Log($"Cannot find header for {body.SettlementId}");
+                else
+                {
+                    settlement.Credits = body.Credits;
+                    settlement.Deductions = body.Deductions;
+                }
+                mergedSettlements.Add(settlement);
+            }
+                
+            return mergedSettlements;
+        }
     }
 }
