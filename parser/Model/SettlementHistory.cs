@@ -52,10 +52,9 @@ namespace Trucks
             return settlements.Count(s => s.CompanyId == companyId) > 0;
         }
 
-        public static string[] GetCompanies(this List<SettlementHistory> settlements)
+        public static int[] GetCompanies(this List<SettlementHistory> settlements)
         {
-            return settlements.Select(s => s.CompanyId)
-                .Distinct().Cast<string>().ToArray();
+            return settlements.Select(s => s.CompanyId).Distinct().ToArray();
         }
  
          public static IEnumerable<SettlementHistory> FilterByTruck(

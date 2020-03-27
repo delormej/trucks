@@ -23,9 +23,13 @@ namespace Trucks
             List<DriverSettlement> driverSettlements = new List<DriverSettlement>();
             foreach (var settlement in settlements)
             {
-                DriverSettlementFactory generator = new DriverSettlementFactory(settlement);
+                DriverSettlementFactory factory = new DriverSettlementFactory(settlement);
                 foreach (var driver in settlement.GetDrivers(null))
-                    driverSettlements.Add(generator.Create(driver));
+                {
+                    DriverSettlement driverSettlement = factory.Create(driver);
+                    if (driverSettlement != null)
+                        driverSettlements.Add(driverSettlement);
+                }
             }
 
             return driverSettlements;
@@ -48,22 +52,29 @@ namespace Trucks
         public DriverSettlement Create(string driver)
         {
             Logger.Log($"Creating DriverSettlement for {_year}/{_week}, {driver}");
-            
-            DriverSettlement driverSettlement = new DriverSettlement()
-            {
-                Driver = driver,
-                CompanyId = _settlement.CompanyId,
-                WeekId = _week,
-                Year = _year,
-                DriverSettlementDate = GetSettlementDate(),
-                TruckId = GetTruckId(driver)
-            };
-            driverSettlement.FuelCharges = GetFuelCharges(driverSettlement.TruckId);
-            driverSettlement.Credits = GetCredits(driverSettlement.TruckId);
-            driverSettlement.Deductions = GetDeductions(driverSettlement.TruckId);
-            driverSettlement.OccupationalInsurance = GetOccupationalInsurance(driverSettlement.Deductions);
+            try
+            {            
+                DriverSettlement driverSettlement = new DriverSettlement()
+                {
+                    Driver = driver,
+                    CompanyId = _settlement.CompanyId,
+                    WeekId = _week,
+                    Year = _year,
+                    DriverSettlementDate = GetSettlementDate(),
+                    TruckId = GetTruckId(driver)
+                };
+                driverSettlement.FuelCharges = GetFuelCharges(driverSettlement.TruckId);
+                driverSettlement.Credits = GetCredits(driverSettlement.TruckId);
+                driverSettlement.Deductions = GetDeductions(driverSettlement.TruckId);
+                driverSettlement.OccupationalInsurance = GetOccupationalInsurance(driverSettlement.Deductions);
 
-            return driverSettlement;
+                return driverSettlement;
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"Skipping driver settlement for {driver} due to error:\n\t{e.Message}");
+                return null;
+            }
         }
 
         private int GetTruckId(string driver)

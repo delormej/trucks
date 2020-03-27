@@ -75,31 +75,11 @@ namespace Trucks
         public async Task ProcessUploadedAsync()
         {
             Logger.Log("Checking converter for files to download.");
+
             Directory.CreateDirectory(ConvertedDirectory);
             IEnumerable<ZamzarResult> results = await _excelConverter.QueryAllAsync();
-            List<SettlementHistory> settlements = new List<SettlementHistory>();
-
-            // Process all these concurrently.
-            List<Task> tasks = new List<Task>();
-            foreach (ZamzarResult result in results)
-                tasks.Add(ParseResultAsync(result));
-            await Task.WhenAll(tasks);
-
+            List<SettlementHistory> settlements = await ParseUploadedAsync(results);
             SaveLocalSettlements(settlements);
-
-            async Task ParseResultAsync(ZamzarResult result)
-            {
-                try
-                {
-                    string filename = await DownloadFromConverterAsync(result);
-                    SettlementHistory settlement = SettlementHistoryParser.Parse(filename);
-                    settlements.Add(settlement);
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"Unable to process uploaded: {result.target_files[0].name}\n{e}");
-                }
-            }
         }
 
         /// <summary>
@@ -108,43 +88,72 @@ namespace Trucks
         /// </summary>
         public void ProcessLocal(string directory = null)
         {
-            Logger.Log("Processing local converted xlsx files.");
             if (directory == null)
                 directory = ConvertedDirectory;
+
+            Logger.Log($"Processing local converted xlsx files in {directory}.");
 
             List<SettlementHistory> downloadedSettlements = 
                 SettlementHistoryParser.ParseLocalFiles(directory);
 
             if (downloadedSettlements.Count == 0)
             {
-                Logger.Log($"No local settlements found to process.");
+                Logger.Log($"No local settlements found in {directory} to process.");
                 return;
             }
 
             SaveLocalSettlements(downloadedSettlements);
         }
 
+        /// <summary>
+        /// Helper function to wrap the async process of downloading and parsing individual files asyncronously.
+        /// </summary>
+        private async Task<List<SettlementHistory>> ParseUploadedAsync(IEnumerable<ZamzarResult> results)
+        {
+            IEnumerable<Task<SettlementHistory>> parseQuery =
+                from result in results select ParseResultAsync(result);
+            IEnumerable<SettlementHistory> settlements = await Task.WhenAll(parseQuery.ToArray());
+            return settlements.ToList();
+
+            async Task<SettlementHistory> ParseResultAsync(ZamzarResult result)
+            {
+                try
+                {
+                    string filename = await DownloadFromConverterAsync(result);
+                    SettlementHistory settlement = SettlementHistoryParser.Parse(filename);
+                    return settlement;
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"Unable to process uploaded: {result.target_files[0].name}\n{e}");
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to asyncronously download missing settlements from each configured panther company.
+        /// </summary>
         private async Task DownloadSettlementsAsync()
         {
-            List<Task> tasks = new List<Task>();
+            IEnumerable<Task> pantherQuery =
+                from config in _config.Panther select DownloadAsync(config);
 
-            foreach (var pantherConfig in _config.Panther)
+            Task DownloadAsync(PantherConfiguration config)
             {
-                tasks.Add(Task.Run( async () => 
+                try
                 {
-                    try
-                    {
-                        PantherClient panther = new PantherClient(pantherConfig.Company, pantherConfig.Password);
-                        await _settlementService.DownloadMissingSettlements(panther);   
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.Log($"Unable to download missing settlements\n:{e}");
-                    }
-                }));
+                    PantherClient panther = new PantherClient(config.Company, config.Password);
+                    return _settlementService.DownloadMissingSettlements(panther);   
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"Unable to download missing settlements for {config.Company}\n:{e}");
+                    return null;
+                }
             }
-
-            await Task.WhenAll(tasks);
+            
+            await Task.WhenAll(pantherQuery.ToArray());
         }
 
         /// <summary>
@@ -177,13 +186,11 @@ namespace Trucks
             LoadSettlements(settlements.GetCompanies());
             List<SettlementHistory> mergedSettlements = _settlementService.MergeHeaders(settlements);
 
-
             if (settlements.Count == 0)
             {
                 Logger.Log("No settlements to save.");
                 return;
             }
-
 
             SettlementRepository repository = new SettlementRepository();
             repository.SaveSettlements(settlements);
@@ -197,11 +204,15 @@ namespace Trucks
             OnFinished();
         }
 
-        private void LoadSettlements(string[] companies)
+        private void LoadSettlements(int[] companies)
         {
             List<Task> tasks = new List<Task>();
-            foreach (string company in companies)
+            foreach (int companyId in companies)
             {
+                string company = companyId.ToString();
+                if (company == null)
+                    continue;
+                
                 var config = _config.Panther.Where(c => c.Company == company).FirstOrDefault();
                 PantherClient panther = new PantherClient(company, config.Password);
                 tasks.Add(_settlementService.LoadSettlementsAsync(panther));
