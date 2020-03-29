@@ -165,6 +165,7 @@ namespace Trucks
         protected override async Task CreateContainerAsync()
         {
             await CreateContainerAsync("SettlementHistory", "/CompanyId");
+            await CreateContainerAsync("DriverSettlement", "/DriverId");
         }
     }
 }
