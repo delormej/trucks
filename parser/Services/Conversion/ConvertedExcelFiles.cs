@@ -59,8 +59,12 @@ namespace Trucks
         {
             string filename = result.target_files[0].name;
             if (!File.Exists(filename))
+            {
                 filename = await DownloadFromConverter(converter, result, 
                     settlement.CompanyId.ToString());
+                settlement.ConvertedTimestamp = DateTime.Now;
+            }
+            
             if (filename != null)
             {
                 if (SaveFileToDatabase(filename, settlement))
