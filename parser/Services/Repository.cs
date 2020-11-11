@@ -9,7 +9,7 @@ namespace Trucks
 {
     public abstract class Repository
     {
-        private const string endpointUrl = "https://trucksdb.documents.azure.com:443/";
+        private readonly string endpointUrl = Environment.GetEnvironmentVariable("TRUCKDBURI");
         private string authorizationKey = Environment.GetEnvironmentVariable("TRUCKDBKEY");
         protected string databaseId = "trucksdb";
 

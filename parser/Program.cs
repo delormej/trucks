@@ -71,6 +71,10 @@ namespace Trucks
                 {
                     PrintSettlementHeader(args[1], args[2]);
                 }         
+                else if (command == "setup")
+                {
+                    Setup();
+                }
             }
         }
 
@@ -132,7 +136,7 @@ namespace Trucks
         private static void Process(SettlementService settlementService, ExcelConverter converter, PantherClient panther)
         {
             var conversionTask = Task<IEnumerable<ConversionJob>>.Run( () =>
-                settlementService.StartConversion(panther, converter));
+                settlementService.StartConversion(panther, converter, int.MaxValue));
             conversionTask.Wait();
             foreach(var result in conversionTask.Result)
                 System.Console.WriteLine($"Settlement {result.SettlementId} uploaded for conversion.");
@@ -181,6 +185,17 @@ namespace Trucks
                 }
                 wb.Save();
             }
+        }
+
+        private static void Setup()
+        {
+            var settlementRepo = new SettlementRepository();
+            var fuelRepo = new FuelChargeRepository();
+            Task.WhenAll(
+                settlementRepo.EnsureDatabaseAsync(),
+                fuelRepo.EnsureDatabaseAsync()
+            ).Wait();
+            System.Console.WriteLine("Setup database.");
         }
 
         private static void SaveFuelCharges(string file)
